@@ -5,6 +5,8 @@ import { createBackground } from './background.js';
 import { initEnemies, updateEnemies, deathEvents, enemies, spawnEnemy } from './enemies.js';
 import { updateSpawner } from './spawner.js';
 import { initHud, updateHud, showOverlay } from './hud.js';
+import { initProjectiles, updateProjectiles } from './projectiles.js';
+import { addWeapon, updateWeapons } from './weapons.js';
 
 const canvas = document.getElementById('game');
 const R = createRenderer(canvas);
@@ -13,6 +15,8 @@ initEnemies(R.scene);
 initHud();
 
 const player = createPlayer(R.scene);
+initProjectiles(R.scene);
+addWeapon('smg'); // 시작 무기
 
 const game = {
   state: 'playing', // Task 9에서 타이틀/승리 추가
@@ -44,6 +48,8 @@ function tick(dt) {
   player.update(dt, axis());
   updateSpawner(dt, game.elapsed, player);
   updateEnemies(dt, player);
+  updateWeapons(dt, player);
+  updateProjectiles(dt);
 
   // 사망 이벤트 처리 (Task 6에서 젬 드랍 추가)
   for (const d of deathEvents) {
