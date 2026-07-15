@@ -56,6 +56,11 @@ export function updatePickups(dt, player) {
   return gained;
 }
 
+// 디버그/오토파일럿용
+export function gemList() {
+  return active;
+}
+
 export function clearPickups() {
   for (const g of active) { g.mesh.visible = false; pool.push(g); }
   active.length = 0;

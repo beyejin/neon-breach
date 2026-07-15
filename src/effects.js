@@ -3,7 +3,7 @@ import * as THREE from 'three';
 
 let sceneRef = null;
 const active = [];
-const pools = { ring: [], beam: [], flash: [] };
+const pools = { ring: [], beam: [], flash: [], debris: [] };
 
 export function initEffects(scene) { sceneRef = scene; }
 
@@ -19,6 +19,11 @@ function acquire(kind) {
     } else if (kind === 'beam') {
       mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true })
+      );
+    } else if (kind === 'debris') {
+      mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(2, 2),
         new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true })
       );
     } else {
@@ -80,6 +85,30 @@ export function fxFlash(x, y, r, color, dur = 0.25) {
     fx.mesh.material.opacity = 0.9 * (1 - k);
     return k < 1;
   };
+}
+
+// 사망 파편 (픽셀 조각 5개가 튀며 소멸)
+export function fxDebris(x, y, color) {
+  for (let i = 0; i < 5; i++) {
+    const fx = acquire('debris');
+    fx.t = 0; fx.dur = 0.35 + Math.random() * 0.15;
+    const a = Math.random() * Math.PI * 2;
+    const spd = 40 + Math.random() * 60;
+    fx.vx = Math.cos(a) * spd;
+    fx.vy = Math.sin(a) * spd;
+    fx.px = x; fx.py = y;
+    fx.mesh.material.color.setStyle(color);
+    fx.mesh.scale.set(1, 1, 1);
+    fx.update = (dt) => {
+      fx.t += dt;
+      const k = fx.t / fx.dur;
+      fx.px += fx.vx * dt;
+      fx.py += fx.vy * dt;
+      fx.mesh.position.set(fx.px, fx.py, 1.5);
+      fx.mesh.material.opacity = 1 - k;
+      return k < 1;
+    };
+  }
 }
 
 export function updateEffects(dt) {

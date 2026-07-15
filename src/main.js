@@ -11,9 +11,10 @@ import { initHud, updateHud, showOverlay, updateBossBar } from './hud.js';
 import { boss, spawnBoss, updateBoss } from './boss.js';
 import { initProjectiles, updateProjectiles } from './projectiles.js';
 import { addWeapon, updateWeapons, initWeapons } from './weapons.js';
-import { initEffects, updateEffects, fxFlash } from './effects.js';
+import { initEffects, updateEffects, fxFlash, fxDebris } from './effects.js';
+import { COL } from './sprites.js';
 import { nearby, damageEnemy } from './enemies.js';
-import { initPickups, dropGem, updatePickups } from './pickups.js';
+import { initPickups, dropGem, updatePickups, gemList } from './pickups.js';
 import { xpForLevel, rollChoices, applyChoice } from './upgrades.js';
 import { stats } from './stats.js';
 
@@ -119,17 +120,56 @@ function openLevelUp() {
   });
 }
 
+// 화면 흔들림
+const shake = { t: 0, mag: 0 };
+function addShake(mag, dur = 0.25) {
+  shake.mag = Math.max(shake.mag, mag);
+  shake.t = Math.max(shake.t, dur);
+}
+
+// 오토파일럿 (밸런스 자동 검증용): 적을 피해 다니며 젬 방향으로 유영
+function autopilotAxis() {
+  let fx = 0, fy = 0;
+  for (const e of nearby(player.x, player.y, 90)) {
+    const dx = player.x - e.x, dy = player.y - e.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const w = (90 - d) * (e.boss ? 3 : 1);
+    fx += (dx / d) * w;
+    fy += (dy / d) * w;
+  }
+  // 위협이 적으면 가까운 젬 수집
+  if (Math.hypot(fx, fy) < 30) {
+    let bg2 = null, bd = 150 * 150;
+    for (const g of gemList()) {
+      const d = (g.x - player.x) ** 2 + (g.y - player.y) ** 2;
+      if (d < bd) { bd = d; bg2 = g; }
+    }
+    if (bg2) {
+      const d = Math.sqrt(bd) || 1;
+      fx += ((bg2.x - player.x) / d) * 25;
+      fy += ((bg2.y - player.y) / d) * 25;
+    }
+  }
+  // 완만한 원형 드리프트
+  fx += Math.cos(game.elapsed * 0.5) * 14;
+  fy += Math.sin(game.elapsed * 0.5) * 14;
+  const len = Math.hypot(fx, fy) || 1;
+  return { x: fx / len, y: fy / len };
+}
+
 // 게임 로직 1틱 (렌더링과 분리 — 디버그 스텝에서도 사용)
 function tick(dt) {
   if (game.state !== 'playing') return;
   game.elapsed += dt;
 
-  player.update(dt, axis());
+  const prevHp = player.hp;
+  player.update(dt, window.__autopilot ? autopilotAxis() : axis());
 
   // 보스 등장 (10:00) — 일반 스폰 정지
   if (!game.bossSpawned && game.elapsed >= BOSS_TIME) {
     game.bossSpawned = true;
     spawnBoss(player);
+    addShake(6, 0.5);
   }
   updateSpawner(dt, game.elapsed, player, !game.bossSpawned);
   updateEnemies(dt, player);
@@ -140,13 +180,17 @@ function tick(dt) {
   updateAllies(dt, player);
   updateEffects(dt);
 
-  // 해킹: Space 발동
-  if (wasPressed('Space')) tryHack(player);
+  // 해킹: Space 발동 (오토파일럿은 자동 발동)
+  if (wasPressed('Space') || (window.__autopilot && hacking.gauge >= 100)) tryHack(player);
 
-  // 사망 이벤트 → 젬 드랍 + 해킹 충전 (+보스 처치 시 승리)
+  // 피격 감지 → 흔들림
+  if (player.hp < prevHp) addShake(3, 0.2);
+
+  // 사망 이벤트 → 젬 드랍 + 해킹 충전 + 파편 (+보스 처치 시 승리)
   let bossKilled = false;
   for (const d of deathEvents) {
     game.kills++;
+    fxDebris(d.x, d.y, d.boss ? COL.yellow : COL.magenta);
     if (d.boss) { bossKilled = true; continue; }
     dropGem(d.x, d.y, d.xp);
     addCharge(d.elite);
@@ -164,9 +208,13 @@ function tick(dt) {
   if (bossKilled) { victory(); return; }
   if (player.dead) { gameOver(); return; }
 
-  // 카메라 추적
-  R.camera.position.x += (player.x - R.camera.position.x) * Math.min(1, dt * 8);
-  R.camera.position.y += (player.y - R.camera.position.y) * Math.min(1, dt * 8);
+  // 카메라 추적 + 흔들림
+  shake.t = Math.max(0, shake.t - dt);
+  if (shake.t <= 0) shake.mag = 0;
+  const sx = shake.mag * (Math.random() * 2 - 1) * (shake.t > 0 ? 1 : 0);
+  const sy = shake.mag * (Math.random() * 2 - 1) * (shake.t > 0 ? 1 : 0);
+  R.camera.position.x += (player.x - R.camera.position.x) * Math.min(1, dt * 8) + sx * dt * 20;
+  R.camera.position.y += (player.y - R.camera.position.y) * Math.min(1, dt * 8) + sy * dt * 20;
   bg.update(R.camera.position.x, R.camera.position.y);
 
   updateHud({
