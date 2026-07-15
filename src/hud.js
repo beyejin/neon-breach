@@ -4,6 +4,9 @@ const css = `
 #hud .top { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); text-align: center; }
 #hud .timer { font-size: 28px; font-weight: bold; color: #00e5ff; text-shadow: 0 0 8px #00e5ff88; }
 #hud .sub { font-size: 13px; margin-top: 2px; color: #8892c0; }
+#hud .bossbar { display: none; width: 340px; height: 9px; margin: 8px auto 0; background: #1a0a12; border: 1px solid #5e1430; }
+#hud .bossbar > div { height: 100%; width: 100%; background: linear-gradient(90deg, #ff2d55, #ff6090); box-shadow: 0 0 12px #ff2d78; }
+#hud .bossname { display: none; font-size: 11px; letter-spacing: 3px; color: #ff6090; margin-top: 3px; }
 #hud .xpbar { position: absolute; top: 0; left: 0; right: 0; height: 5px; background: #141627; }
 #hud .xpbar > div { height: 100%; width: 0%; background: #b44dff; box-shadow: 0 0 8px #b44dff; transition: width .15s; }
 #hud .bottom { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); width: 320px; text-align: center; }
@@ -46,6 +49,8 @@ export function initHud() {
     <div class="top">
       <div class="timer" id="timer">00:00</div>
       <div class="sub">Lv <span id="level">1</span> · 처치 <span id="kills">0</span></div>
+      <div class="bossbar" id="bossbar"><div id="bossfill"></div></div>
+      <div class="bossname" id="bossname">중앙 통제 코어</div>
     </div>
     <div class="hackwrap">
       <div class="hackbar"><div id="hackfill"></div></div>
@@ -67,6 +72,9 @@ export function initHud() {
     hptext: hud.querySelector('#hptext'),
     hackfill: hud.querySelector('#hackfill'),
     hacklabel: hud.querySelector('#hacklabel'),
+    bossbar: hud.querySelector('#bossbar'),
+    bossfill: hud.querySelector('#bossfill'),
+    bossname: hud.querySelector('#bossname'),
     hud,
   };
 }
@@ -88,6 +96,13 @@ export function updateHud({ elapsed, level, kills, xpRatio, hp, maxHp, hackGauge
     el.hacklabel.textContent = '해킹 충전 중';
     el.hacklabel.classList.remove('ready');
   }
+}
+
+export function updateBossBar(ratio) {
+  const show = ratio != null;
+  el.bossbar.style.display = show ? 'block' : 'none';
+  el.bossname.style.display = show ? 'block' : 'none';
+  if (show) el.bossfill.style.width = `${Math.max(0, ratio * 100)}%`;
 }
 
 export function setHudVisible(v) {

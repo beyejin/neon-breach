@@ -7,6 +7,7 @@ export const ENEMY_TYPES = {
   shooterbot: { hp: 15,  speed: 40, dmg: 6,  radius: 5,  xp: 2, sprite: 'shooterbot', range: 120 },
   tankbot:    { hp: 80,  speed: 22, dmg: 15, radius: 7,  xp: 4, sprite: 'tankbot' },
   elite:      { hp: 200, speed: 45, dmg: 12, radius: 8,  xp: 12, sprite: 'elite', elite: true },
+  boss:       { hp: 3000, speed: 0, dmg: 20, radius: 11, xp: 0,  sprite: 'boss', boss: true },
 };
 
 export const enemies = [];        // 살아있는 적
@@ -41,7 +42,7 @@ export function spawnEnemy(type, x, y, hpMul = 1) {
     hp: t.hp * hpMul, maxHp: t.hp * hpMul,
     speed: t.speed * (0.9 + Math.random() * 0.2),
     dmg: t.dmg, radius: t.radius, xp: t.xp,
-    elite: !!t.elite, range: t.range || 0,
+    elite: !!t.elite, boss: !!t.boss, range: t.range || 0,
     flash: 0, shootCd: 0,
     mesh,
   };
@@ -105,6 +106,15 @@ export function updateEnemies(dt, player) {
       player.takeDamage(e.dmg);
     }
 
+    // 슈터봇: 사거리 내 사격
+    if (e.range > 0 && dist < e.range * 1.1) {
+      e.shootCd -= dt;
+      if (e.shootCd <= 0) {
+        e.shootCd = 1.8;
+        fireEnemyShot(e.x, e.y, (dx / dist) * 80, (dy / dist) * 80, e.dmg);
+      }
+    }
+
     // 렌더
     e.flash = Math.max(0, e.flash - dt);
     e.mesh.position.set(e.x, e.y, 0.5);
@@ -118,7 +128,7 @@ export function damageEnemy(e, n) {
   e.hp -= n;
   e.flash = 0.08;
   if (e.hp <= 0) {
-    deathEvents.push({ x: e.x, y: e.y, xp: e.xp, elite: e.elite, type: e.type });
+    deathEvents.push({ x: e.x, y: e.y, xp: e.xp, elite: e.elite, boss: e.boss, type: e.type });
     removeEnemy(e);
     return true;
   }
@@ -134,4 +144,46 @@ export function removeEnemy(e) {
 export function clearEnemies() {
   while (enemies.length) removeEnemy(enemies[0]);
   deathEvents.length = 0;
+}
+
+// ---- 적 탄환 (슈터봇/보스) ----
+const shots = [];
+const shotPool = [];
+
+export function fireEnemyShot(x, y, vx, vy, dmg) {
+  let s = shotPool.pop();
+  if (!s) {
+    const mesh = makeQuad(makeSprite('enemybullet'), 4, 4);
+    sceneRef.add(mesh);
+    s = { mesh };
+  }
+  s.x = x; s.y = y; s.vx = vx; s.vy = vy;
+  s.dmg = dmg; s.life = 4;
+  s.mesh.visible = true;
+  shots.push(s);
+}
+
+export function updateEnemyShots(dt, player) {
+  for (let i = shots.length - 1; i >= 0; i--) {
+    const s = shots[i];
+    s.life -= dt;
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.mesh.position.set(s.x, s.y, 0.7);
+    let dead = s.life <= 0;
+    if (!dead && Math.hypot(s.x - player.x, s.y - player.y) < player.radius + 3) {
+      player.takeDamage(s.dmg);
+      dead = true;
+    }
+    if (dead) {
+      s.mesh.visible = false;
+      shots.splice(i, 1);
+      shotPool.push(s);
+    }
+  }
+}
+
+export function clearEnemyShots() {
+  for (const s of shots) { s.mesh.visible = false; shotPool.push(s); }
+  shots.length = 0;
 }
