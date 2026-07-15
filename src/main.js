@@ -1,30 +1,26 @@
-import { createRenderer, makeQuad } from './renderer.js';
-import { makeSprite, spriteSize } from './sprites.js';
+import { createRenderer } from './renderer.js';
+import { axis, flushInput } from './input.js';
+import { createPlayer } from './player.js';
+import { createBackground } from './background.js';
 
 const canvas = document.getElementById('game');
 const R = createRenderer(canvas);
+const bg = createBackground(R.scene);
+const player = createPlayer(R.scene);
 
-// Task 2 검증용 갤러리: 전체 스프라이트 나열 (3배 확대)
-const names = ['player', 'rushbot', 'shooterbot', 'tankbot', 'elite', 'boss', 'gem', 'bullet', 'missile', 'spike', 'enemybullet'];
-let x = -150;
-for (const name of names) {
-  const { w, h } = spriteSize(name);
-  const mesh = makeQuad(makeSprite(name), w * 3, h * 3);
-  mesh.position.set(x, 0, 0);
-  R.scene.add(mesh);
-  x += w * 3 + 14;
-}
-// 아군 리컬러 확인
-const allyMesh = makeQuad(makeSprite('tankbot', 0, 'ally'), 14 * 3, 12 * 3);
-allyMesh.position.set(-150, -80, 0);
-R.scene.add(allyMesh);
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
 
-// 걷기 프레임 확인 (1프레임)
-const walk = makeQuad(makeSprite('player', 1), 10 * 3, 12 * 3);
-walk.position.set(-100, -80, 0);
-R.scene.add(walk);
+  player.update(dt, axis());
 
-function loop() {
+  // 카메라 추적 (부드럽게)
+  R.camera.position.x += (player.x - R.camera.position.x) * Math.min(1, dt * 8);
+  R.camera.position.y += (player.y - R.camera.position.y) * Math.min(1, dt * 8);
+  bg.update(R.camera.position.x, R.camera.position.y);
+
+  flushInput();
   R.render();
   requestAnimationFrame(loop);
 }
