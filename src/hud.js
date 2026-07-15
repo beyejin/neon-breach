@@ -24,6 +24,12 @@ const css = `
 .overlay .stats { font-size: 15px; color: #8892c0; line-height: 1.8; text-align: center; }
 .overlay button { pointer-events: auto; font-family: inherit; font-size: 17px; padding: 10px 34px; background: transparent; color: #00e5ff; border: 1px solid #00e5ff; cursor: pointer; letter-spacing: 3px; }
 .overlay button:hover { background: #00e5ff22; box-shadow: 0 0 14px #00e5ff66; }
+.overlay .cards { display: flex; gap: 16px; }
+.overlay .card { pointer-events: auto; width: 190px; padding: 18px 16px; border: 1px solid #3a2a6e; background: #0c0a1acc; cursor: pointer; text-align: center; transition: all .12s; }
+.overlay .card:hover { border-color: #b44dff; box-shadow: 0 0 18px #b44dff55; transform: translateY(-4px); }
+.overlay .card .tag { font-size: 10px; letter-spacing: 2px; color: #b44dff; }
+.overlay .card .title { font-size: 16px; margin: 10px 0 8px; color: #e8ecff; }
+.overlay .card .desc { font-size: 12px; color: #8892c0; line-height: 1.5; }
 `;
 
 let el = {};

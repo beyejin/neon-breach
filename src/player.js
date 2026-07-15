@@ -1,6 +1,7 @@
 // 플레이어 상태/이동
 import { makeQuad } from './renderer.js';
 import { makeSprite, spriteSize } from './sprites.js';
+import { stats } from './stats.js';
 
 export function createPlayer(scene) {
   const { w, h } = spriteSize('player');
@@ -25,8 +26,9 @@ export function createPlayer(scene) {
 
       const moving = ax.x !== 0 || ax.y !== 0;
       if (moving) {
-        this.x += ax.x * this.speed * dt;
-        this.y += ax.y * this.speed * dt;
+        const spd = this.speed * stats.speedMul;
+        this.x += ax.x * spd * dt;
+        this.y += ax.y * spd * dt;
         if (ax.x !== 0) this.facing = ax.x > 0 ? 1 : -1;
         this.animTime += dt;
         if (this.animTime > 0.18) {

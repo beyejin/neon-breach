@@ -7,6 +7,9 @@ import { updateSpawner } from './spawner.js';
 import { initHud, updateHud, showOverlay } from './hud.js';
 import { initProjectiles, updateProjectiles } from './projectiles.js';
 import { addWeapon, updateWeapons } from './weapons.js';
+import { initPickups, dropGem, updatePickups } from './pickups.js';
+import { xpForLevel, rollChoices, applyChoice } from './upgrades.js';
+import { stats } from './stats.js';
 
 const canvas = document.getElementById('game');
 const R = createRenderer(canvas);
@@ -16,6 +19,7 @@ initHud();
 
 const player = createPlayer(R.scene);
 initProjectiles(R.scene);
+initPickups(R.scene);
 addWeapon('smg'); // 시작 무기
 
 const game = {
@@ -40,6 +44,30 @@ function gameOver() {
   `);
 }
 
+function openLevelUp() {
+  game.state = 'levelup';
+  const choices = rollChoices();
+  const cardsHtml = choices.map((c, i) => `
+    <div class="card" data-i="${i}">
+      <div class="tag">${c.tag}</div>
+      <div class="title">${c.title}</div>
+      <div class="desc">${c.desc}</div>
+    </div>
+  `).join('');
+  overlay = showOverlay(`
+    <h1 class="neon-cyan" style="font-size:26px;">시스템 업그레이드</h1>
+    <div class="cards">${cardsHtml}</div>
+  `);
+  overlay.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => {
+      applyChoice(choices[+card.dataset.i], player);
+      overlay.remove();
+      overlay = null;
+      game.state = 'playing';
+    });
+  });
+}
+
 // 게임 로직 1틱 (렌더링과 분리 — 디버그 스텝에서도 사용)
 function tick(dt) {
   if (game.state !== 'playing') return;
@@ -51,11 +79,20 @@ function tick(dt) {
   updateWeapons(dt, player);
   updateProjectiles(dt);
 
-  // 사망 이벤트 처리 (Task 6에서 젬 드랍 추가)
+  // 사망 이벤트 → 젬 드랍
   for (const d of deathEvents) {
     game.kills++;
+    dropGem(d.x, d.y, d.xp);
   }
   deathEvents.length = 0;
+
+  // XP 획득 → 레벨업
+  game.xp += updatePickups(dt, player);
+  if (game.xp >= xpForLevel(game.level)) {
+    game.xp -= xpForLevel(game.level);
+    game.level++;
+    openLevelUp();
+  }
 
   if (player.dead) gameOver();
 
@@ -68,7 +105,7 @@ function tick(dt) {
     elapsed: game.elapsed,
     level: game.level,
     kills: game.kills,
-    xpRatio: 0,
+    xpRatio: game.xp / xpForLevel(game.level),
     hp: player.hp,
     maxHp: player.maxHp,
     hackGauge: game.hackGauge,
