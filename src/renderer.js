@@ -27,9 +27,9 @@ export function createRenderer(canvas) {
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.9,   // strength
-    0.4,   // radius
-    0.35   // threshold — 어두운 배경/스프라이트는 제외, 네온 색만 발광
+    0.55,  // strength
+    0.25,  // radius
+    0.6    // threshold — 어두운 배경/스프라이트는 제외, 밝은 네온 색만 발광
   );
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
