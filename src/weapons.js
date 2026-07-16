@@ -5,6 +5,7 @@ import { stats } from './stats.js';
 import { fxRing, fxBeam } from './effects.js';
 import { makeQuad } from './renderer.js';
 import { makeSprite } from './sprites.js';
+import { sfx } from './audio.js';
 
 let sceneRef = null;
 export function initWeapons(scene) { sceneRef = scene; }
@@ -33,6 +34,7 @@ export const WEAPON_DEFS = {
       const d = Math.hypot(dx, dy) || 1;
       const dmg = (8 + 3 * (lv - 1)) * stats.dmgMul;
       const shots = lv >= 3 ? 2 : 1;
+      sfx.shoot();
       for (let i = 0; i < shots; i++) {
         const spread = shots > 1 ? (i - 0.5) * 0.18 : (Math.random() - 0.5) * 0.08;
         const a = Math.atan2(dy, dx) + spread;
@@ -53,6 +55,7 @@ export const WEAPON_DEFS = {
       const r = 60 + 8 * (lv - 1);
       const dmg = (12 + 4 * (lv - 1)) * stats.dmgMul;
       fxRing(player.x, player.y, r, '#00e5ff', 0.4);
+      sfx.nova();
       for (const e of nearby(player.x, player.y, r)) {
         if (Math.hypot(e.x - player.x, e.y - player.y) <= r + e.radius) damageEnemy(e, dmg);
       }
@@ -90,6 +93,7 @@ export const WEAPON_DEFS = {
       const LEN = 260;
       const dmg = (15 + 5 * (lv - 1)) * stats.dmgMul;
       fxBeam(player.x, player.y, a, LEN, 5, '#ff2d78', 0.15);
+      sfx.laser();
       const dirX = Math.cos(a), dirY = Math.sin(a);
       for (const e of [...enemies]) {
         const rx = e.x - player.x, ry = e.y - player.y;

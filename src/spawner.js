@@ -5,9 +5,9 @@ const MAX_ALIVE = 220;
 
 // 분 단위 스폰율 (마리/초)
 const WAVES = [
-  { until: 60,  rates: { rushbot: 0.8 } },
-  { until: 120, rates: { rushbot: 1.0, shooterbot: 0.25 } },
-  { until: 180, rates: { rushbot: 1.3, shooterbot: 0.4 } },
+  { until: 60,  rates: { rushbot: 1.8 } },
+  { until: 120, rates: { rushbot: 2.0, shooterbot: 0.3 } },
+  { until: 180, rates: { rushbot: 2.2, shooterbot: 0.45 } },
   { until: 240, rates: { rushbot: 1.4, shooterbot: 0.5, tankbot: 0.2 } },
   { until: 330, rates: { rushbot: 1.7, shooterbot: 0.65, tankbot: 0.3 } },
   { until: 420, rates: { rushbot: 2.1, shooterbot: 0.8, tankbot: 0.4 } },
@@ -21,6 +21,14 @@ let eliteTimer = 0;
 export function resetSpawner() {
   for (const k in acc) acc[k] = 0;
   eliteTimer = 0;
+}
+
+// 시작 직후 심심하지 않게 링 형태로 즉시 투입
+export function initialBurst(player) {
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    spawnEnemy('rushbot', player.x + Math.cos(a) * 200, player.y + Math.sin(a) * 200, 1);
+  }
 }
 
 function spawnPos(player) {

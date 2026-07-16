@@ -6,7 +6,7 @@ import { initEnemies, updateEnemies, deathEvents, enemies, spawnEnemy, updateEne
 import { initAllies, updateAllies, allies } from './allies.js';
 import { hacking, addCharge, tryHack } from './hacking.js';
 import { wasPressed } from './input.js';
-import { updateSpawner } from './spawner.js';
+import { updateSpawner, initialBurst } from './spawner.js';
 import { initHud, updateHud, showOverlay, updateBossBar } from './hud.js';
 import { boss, spawnBoss, updateBoss } from './boss.js';
 import { initProjectiles, updateProjectiles } from './projectiles.js';
@@ -17,6 +17,7 @@ import { nearby, damageEnemy } from './enemies.js';
 import { initPickups, dropGem, updatePickups, gemList } from './pickups.js';
 import { xpForLevel, rollChoices, applyChoice } from './upgrades.js';
 import { stats } from './stats.js';
+import { initAudio, sfx, startBgm, stopBgm, toggleMute } from './audio.js';
 
 const canvas = document.getElementById('game');
 const R = createRenderer(canvas);
@@ -35,6 +36,7 @@ addWeapon('smg'); // 시작 무기
 // 미사일 폭발: 반경 내 광역 데미지 + 플래시
 function onExplode(x, y, r, dmg) {
   fxFlash(x, y, r, '#ffe600', 0.25);
+  sfx.boom();
   for (const e of nearby(x, y, r)) {
     if (Math.hypot(e.x - x, e.y - y) <= r + e.radius) damageEnemy(e, dmg);
   }
@@ -67,7 +69,7 @@ function showTitle() {
       보안 드론 군단을 뚫고 10분간 생존하라.<br>
       적을 <span class="neon-mint">해킹</span>해 내 편으로 만들 수 있다.<br><br>
       WASD / 방향키 — 이동 · 무기는 자동 발사<br>
-      SPACE — 해킹 (게이지 100%일 때, 근처 적을 아군화)
+      SPACE — 해킹 (게이지 100%일 때, 근처 적을 아군화) · M — 음소거
     </div>
     <button id="startBtn">침투 개시</button>
   `);
@@ -75,11 +77,16 @@ function showTitle() {
     overlay.remove();
     overlay = null;
     game.state = 'playing';
+    initialBurst(player);
+    initAudio();
+    startBgm();
   });
 }
 
 function gameOver() {
   game.state = 'gameover';
+  stopBgm();
+  sfx.lose();
   overlay = showOverlay(`
     <h1 class="neon-red">접속 종료</h1>
     <div class="stats">생존 시간 ${fmtTime(game.elapsed)}<br>처치 ${game.kills}</div>
@@ -89,6 +96,8 @@ function gameOver() {
 
 function victory() {
   game.state = 'victory';
+  stopBgm();
+  sfx.win();
   overlay = showOverlay(`
     <h1 class="neon-mint">시스템 장악 완료</h1>
     <div class="stats">클리어 시간 ${fmtTime(game.elapsed)}<br>처치 ${game.kills}</div>
@@ -98,6 +107,7 @@ function victory() {
 
 function openLevelUp() {
   game.state = 'levelup';
+  sfx.levelup();
   const choices = rollChoices();
   const cardsHtml = choices.map((c, i) => `
     <div class="card" data-i="${i}">
@@ -170,6 +180,7 @@ function tick(dt) {
     game.bossSpawned = true;
     spawnBoss(player);
     addShake(6, 0.5);
+    sfx.boss();
   }
   updateSpawner(dt, game.elapsed, player, !game.bossSpawned);
   updateEnemies(dt, player);
@@ -181,16 +192,22 @@ function tick(dt) {
   updateEffects(dt);
 
   // 해킹: Space 발동 (오토파일럿은 자동 발동)
-  if (wasPressed('Space') || (window.__autopilot && hacking.gauge >= 100)) tryHack(player);
+  if (wasPressed('Space') || (window.__autopilot && hacking.gauge >= 100)) {
+    if (tryHack(player)) sfx.hack();
+  }
 
-  // 피격 감지 → 흔들림
-  if (player.hp < prevHp) addShake(3, 0.2);
+  // 음소거 토글
+  if (wasPressed('KeyM')) toggleMute();
+
+  // 피격 감지 → 흔들림 + 사운드
+  if (player.hp < prevHp) { addShake(3, 0.2); sfx.hurt(); }
 
   // 사망 이벤트 → 젬 드랍 + 해킹 충전 + 파편 (+보스 처치 시 승리)
   let bossKilled = false;
   for (const d of deathEvents) {
     game.kills++;
     fxDebris(d.x, d.y, d.boss ? COL.yellow : COL.magenta);
+    sfx.kill();
     if (d.boss) { bossKilled = true; continue; }
     dropGem(d.x, d.y, d.xp);
     addCharge(d.elite);
@@ -198,7 +215,9 @@ function tick(dt) {
   deathEvents.length = 0;
 
   // XP 획득 → 레벨업
-  game.xp += updatePickups(dt, player);
+  const gained = updatePickups(dt, player);
+  if (gained > 0) sfx.pickup();
+  game.xp += gained;
   if (game.xp >= xpForLevel(game.level)) {
     game.xp -= xpForLevel(game.level);
     game.level++;
