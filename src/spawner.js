@@ -1,18 +1,18 @@
 // 시간 기반 웨이브 테이블
 import { spawnEnemy, enemies } from './enemies.js';
 
-const MAX_ALIVE = 220;
+const MAX_ALIVE = 300;
 
 // 분 단위 스폰율 (마리/초)
 const WAVES = [
-  { until: 60,  rates: { rushbot: 1.8 } },
-  { until: 120, rates: { rushbot: 2.0, shooterbot: 0.3 } },
-  { until: 180, rates: { rushbot: 2.2, shooterbot: 0.45 } },
-  { until: 240, rates: { rushbot: 1.4, shooterbot: 0.5, tankbot: 0.2 } },
-  { until: 330, rates: { rushbot: 1.7, shooterbot: 0.65, tankbot: 0.3 } },
-  { until: 420, rates: { rushbot: 2.1, shooterbot: 0.8, tankbot: 0.4 } },
-  { until: 510, rates: { rushbot: 2.6, shooterbot: 1.0, tankbot: 0.55 } },
-  { until: 600, rates: { rushbot: 3.2, shooterbot: 1.3, tankbot: 0.7 } },
+  { until: 60,  rates: { rushbot: 2.8 } },
+  { until: 120, rates: { rushbot: 3.0, shooterbot: 0.5 } },
+  { until: 180, rates: { rushbot: 3.4, shooterbot: 0.7 } },
+  { until: 240, rates: { rushbot: 2.2, shooterbot: 0.8, tankbot: 0.3 } },
+  { until: 330, rates: { rushbot: 2.6, shooterbot: 1.0, tankbot: 0.45 } },
+  { until: 420, rates: { rushbot: 3.2, shooterbot: 1.2, tankbot: 0.6 } },
+  { until: 510, rates: { rushbot: 4.0, shooterbot: 1.5, tankbot: 0.8 } },
+  { until: 600, rates: { rushbot: 5.0, shooterbot: 2.0, tankbot: 1.0 } },
 ];
 
 const acc = {};        // 타입별 스폰 누적치
@@ -25,8 +25,8 @@ export function resetSpawner() {
 
 // 시작 직후 심심하지 않게 링 형태로 즉시 투입
 export function initialBurst(player) {
-  for (let i = 0; i < 10; i++) {
-    const a = (i / 10) * Math.PI * 2;
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
     spawnEnemy('rushbot', player.x + Math.cos(a) * 200, player.y + Math.sin(a) * 200, 1);
   }
 }
