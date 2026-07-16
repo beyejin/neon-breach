@@ -42,7 +42,7 @@ function onExplode(x, y, r, dmg) {
   }
 }
 
-const BOSS_TIME = 600; // 10:00
+const BOSS_TIME = 480; // 8:00
 
 const game = {
   state: 'title',
@@ -66,7 +66,7 @@ function showTitle() {
   overlay = showOverlay(`
     <h1 class="neon-cyan">NEON BREACH</h1>
     <div class="stats">
-      보안 드론 군단을 뚫고 10분간 생존하라.<br>
+      보안 드론 군단을 뚫고 8분간 생존하라.<br>
       적을 <span class="neon-mint">해킹</span>해 내 편으로 만들 수 있다.<br><br>
       WASD / 방향키 — 이동 · 무기는 자동 발사<br>
       SPACE — 해킹 (게이지 100%일 때, 근처 적을 아군화) · M — 음소거
