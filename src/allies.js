@@ -1,7 +1,7 @@
 // 해킹된 아군 (최대 5기)
 import { makeQuad } from './renderer.js';
 import { makeSprite, spriteSize } from './sprites.js';
-import { ENEMY_TYPES, nearby, damageEnemy, enemies } from './enemies.js';
+import { ENEMY_TYPES, nearby, damageEnemy } from './enemies.js';
 
 export const MAX_ALLIES = 5;
 export const allies = [];
