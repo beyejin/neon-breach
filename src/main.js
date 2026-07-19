@@ -16,7 +16,6 @@ import { COL } from './sprites.js';
 import { nearby, damageEnemy } from './enemies.js';
 import { initPickups, dropGem, updatePickups, gemList } from './pickups.js';
 import { xpForLevel, rollChoices, applyChoice } from './upgrades.js';
-import { stats } from './stats.js';
 import { initAudio, sfx, startBgm, stopBgm, toggleMute } from './audio.js';
 
 const canvas = document.getElementById('game');
@@ -175,7 +174,7 @@ function tick(dt) {
   const prevHp = player.hp;
   player.update(dt, window.__autopilot ? autopilotAxis() : axis());
 
-  // 보스 등장 (10:00) — 일반 스폰 정지
+  // 보스 등장 (8:00) — 일반 스폰 정지
   if (!game.bossSpawned && game.elapsed >= BOSS_TIME) {
     game.bossSpawned = true;
     spawnBoss(player);

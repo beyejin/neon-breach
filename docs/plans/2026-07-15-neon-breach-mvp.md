@@ -1,5 +1,7 @@
 # NEON BREACH MVP 구현 계획
 
+> **V1 역사 문서:** 이 계획은 최초 10분 MVP를 구현한 기록이다. 현재 작업은 `2026-07-19-neon-breach-v2-execution-plan.md`를 따른다. 이 문서의 미완료 체크박스를 V2 남은 작업으로 해석하지 않는다.
+
 > **작업 에이전트 참고:** 필수 서브 스킬 — superpowers:subagent-driven-development(권장) 또는 superpowers:executing-plans를 사용해 이 계획을 태스크 단위로 구현할 것. 진행 상황은 체크박스(`- [ ]`)로 추적한다.
 
 **목표:** 사이버펑크 해커 서바이버라이크 웹 게임 — 10분 생존, 적 해킹→아군화 메커닉, 픽셀아트×네온 블룸.

@@ -1,4 +1,4 @@
-// 보스: 10:00 등장, 패턴 ① 예고선 돌진 ② 원형 탄막
+// 보스: 8:00 등장, 패턴 ① 예고선 돌진 ② 원형 탄막
 // 적 배열에 통합되어 모든 무기/아군의 데미지를 그대로 받는다 (이동은 여기서 제어)
 import { spawnEnemy, fireEnemyShot } from './enemies.js';
 import { fxBeam, fxRing } from './effects.js';
