@@ -19,7 +19,7 @@ const css = `
 #hud .hacklabel { font-size: 10px; color: var(--theme-success); margin-top: 2px; letter-spacing: 1px; }
 #hud .hacklabel.ready { color: var(--theme-text-bright); animation: hudpulse 0.8s infinite; }
 @keyframes hudpulse { 50% { opacity: 0.4; } }
-.overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: var(--theme-overlay); font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif; color: var(--theme-text); z-index: 10; }
+.overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: var(--theme-overlay-pattern), var(--theme-overlay); font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif; color: var(--theme-text); z-index: 10; }
 .overlay h1 { font-size: 42px; letter-spacing: 6px; }
 .overlay .accent-primary { color: var(--theme-text-bright); border-bottom: 5px solid var(--theme-accent); padding-bottom: 8px; }
 .overlay .neon-red { color: var(--theme-danger); }

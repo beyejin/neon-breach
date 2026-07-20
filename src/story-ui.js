@@ -24,6 +24,7 @@ const css = `
 .story-audit { border-color: var(--theme-accent) !important; }
 .story-audit h2 { color: var(--theme-accent-soft); margin-bottom: 16px; }
 .story-hint { color: var(--theme-muted); margin-top: 18px; text-align: center; }
+.story-theme-mark { margin: -4px 0 12px; color: var(--theme-accent); font-family: 'SFMono-Regular', Menlo, monospace; font-size: 11px; letter-spacing: 2px; }
 .story-settings { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .story-theme-settings { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--theme-line); }
 .story-theme-label { display: block; margin-bottom: 8px; color: var(--theme-muted); font-size: 12px; letter-spacing: 1px; }
@@ -71,6 +72,7 @@ function ensureRoot() {
 
 function createBlocking(title) {
   const overlay = make('div', 'overlay story-blocking');
+  overlay.dataset.theme = activeThemeId;
   const heading = make('h1', 'accent-primary', title);
   const copy = make('div', 'story-copy');
   overlay.append(heading, copy);
@@ -120,6 +122,7 @@ export function showTitleScreen(content, {
 } = {}) {
   ensureRoot();
   const { overlay, copy } = createBlocking(content.productTitle);
+  copy.appendChild(make('p', 'story-theme-mark', theme === 'casefile' ? 'CASE FILE / 스토리형 괴담 처리' : 'NEON SIGNAL / 네온사인'));
   copy.appendChild(make('p', 'story-status', content.chapterTitle));
   for (const line of content.tutorial) copy.appendChild(make('p', null, line));
   if (nextChapterPending) {

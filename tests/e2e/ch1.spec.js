@@ -20,6 +20,7 @@ test.describe('CH1 브라우저 회귀', () => {
     await expect(page.locator('button[data-theme="neon"]')).toBeVisible();
     await page.locator('button[data-theme="casefile"]').click();
     await expect(page.locator('button[data-theme="casefile"]')).toHaveClass(/selected/);
+    await expect(page.getByText('CASE FILE / 스토리형 괴담 처리', { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('casefile');
 
     await page.getByRole('button', { name: 'CHAPTER 1 시작', exact: true }).click();
