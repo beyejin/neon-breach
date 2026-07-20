@@ -1,5 +1,5 @@
 // 레벨업 선택지 생성/적용
-import { WEAPON_DEFS, ownedWeapons, addWeapon, upgradeWeapon, hasWeapon, weaponLevel, MAX_WEAPON_LEVEL } from './weapons.js';
+import { WEAPON_DEFS, addWeapon, upgradeWeapon, hasWeapon, weaponLevel, MAX_WEAPON_LEVEL } from './weapons.js';
 import { stats } from './stats.js';
 
 export function xpForLevel(n) {

@@ -8,15 +8,24 @@ export function createBackground(scene) {
   cv.width = TILE;
   cv.height = TILE;
   const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#0a0b12';
-  ctx.fillRect(0, 0, TILE, TILE);
-  ctx.strokeStyle = '#141627'; // 발광하지 않는 어두운 라인
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, TILE, TILE);
-  // 미세한 노이즈 점
-  ctx.fillStyle = '#101322';
-  ctx.fillRect(7, 21, 2, 2);
-  ctx.fillRect(24, 9, 2, 2);
+  function drawTile(theme) {
+    ctx.fillStyle = theme.canvas.tile;
+    ctx.fillRect(0, 0, TILE, TILE);
+    ctx.strokeStyle = theme.canvas.grid;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, TILE, TILE);
+    ctx.fillStyle = theme.canvas.noise;
+    ctx.fillRect(7, 21, 2, 2);
+    ctx.fillRect(24, 9, 2, 2);
+  }
+
+  drawTile({
+    canvas: {
+      tile: '#171a15',
+      grid: '#292d25',
+      noise: '#34382f',
+    },
+  });
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -35,6 +44,10 @@ export function createBackground(scene) {
   scene.add(mesh);
 
   return {
+    setTheme(theme) {
+      drawTile(theme);
+      tex.needsUpdate = true;
+    },
     // 카메라를 따라가되 텍스처 오프셋으로 월드 고정처럼 보이게
     update(camX, camY) {
       mesh.position.x = camX;

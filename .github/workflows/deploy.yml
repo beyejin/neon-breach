@@ -24,7 +24,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check:full
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

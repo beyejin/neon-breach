@@ -1,19 +1,24 @@
 // 해킹된 아군 (최대 5기)
 import { makeQuad } from './renderer.js';
 import { makeSprite, spriteSize } from './sprites.js';
-import { ENEMY_TYPES, nearby, damageEnemy, enemies } from './enemies.js';
+import { ENEMY_TYPES, nearby, damageEnemy } from './enemies.js';
 
 export const MAX_ALLIES = 5;
 export const allies = [];
+export const departingAllies = [];
 let sceneRef = null;
 
 export function initAllies(scene) { sceneRef = scene; }
 
 export function addAlly(fromEnemy) {
-  // 초과 시 최고참 소멸
+  let dispatched = null;
   if (allies.length >= MAX_ALLIES) {
-    const old = allies.shift();
-    old.mesh.removeFromParent();
+    dispatched = allies.shift();
+    dispatched.dispatchTarget = {
+      x: dispatched.x + 420,
+      y: dispatched.y + 180,
+    };
+    departingAllies.push(dispatched);
   }
   const t = ENEMY_TYPES[fromEnemy.type];
   const { w, h } = spriteSize(t.sprite);
@@ -30,7 +35,7 @@ export function addAlly(fromEnemy) {
     mesh,
   };
   allies.push(a);
-  return a;
+  return { added: a, dispatched };
 }
 
 export function updateAllies(dt, player) {
@@ -70,9 +75,27 @@ export function updateAllies(dt, player) {
     a.mesh.position.set(a.x, a.y, 0.6);
     a.mesh.scale.x = dx > 0 ? 1 : -1;
   }
+
+  for (let i = departingAllies.length - 1; i >= 0; i--) {
+    const ally = departingAllies[i];
+    const dx = ally.dispatchTarget.x - ally.x;
+    const dy = ally.dispatchTarget.y - ally.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    const travel = Math.min(distance, 150 * dt);
+    ally.x += (dx / distance) * travel;
+    ally.y += (dy / distance) * travel;
+    ally.mesh.position.set(ally.x, ally.y, 0.6);
+    ally.mesh.scale.x = dx > 0 ? 1 : -1;
+    if (distance <= 5) {
+      ally.mesh.removeFromParent();
+      departingAllies.splice(i, 1);
+    }
+  }
 }
 
 export function clearAllies() {
   for (const a of allies) a.mesh.removeFromParent();
+  for (const a of departingAllies) a.mesh.removeFromParent();
   allies.length = 0;
+  departingAllies.length = 0;
 }

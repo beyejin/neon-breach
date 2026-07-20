@@ -1,188 +1,535 @@
 import { createRenderer } from './renderer.js';
-import { axis, flushInput } from './input.js';
-import { createPlayer } from './player.js';
+import { axis, consumePressed, flushInput } from './input.js';
+import { createPlayer, resetPlayer } from './player.js';
 import { createBackground } from './background.js';
-import { initEnemies, updateEnemies, deathEvents, enemies, spawnEnemy, updateEnemyShots } from './enemies.js';
-import { initAllies, updateAllies, allies } from './allies.js';
-import { hacking, addCharge, tryHack } from './hacking.js';
-import { wasPressed } from './input.js';
-import { updateSpawner, initialBurst } from './spawner.js';
-import { initHud, updateHud, showOverlay, updateBossBar } from './hud.js';
-import { boss, spawnBoss, updateBoss } from './boss.js';
-import { initProjectiles, updateProjectiles } from './projectiles.js';
-import { addWeapon, updateWeapons, initWeapons } from './weapons.js';
-import { initEffects, updateEffects, fxFlash, fxDebris } from './effects.js';
+import {
+  initEnemies,
+  updateEnemies,
+  deathEvents,
+  enemies,
+  spawnEnemy,
+  updateEnemyShots,
+  clearEnemies,
+  clearEnemyShots,
+  nearby,
+  damageEnemy,
+} from './enemies.js';
+import {
+  initAllies,
+  updateAllies,
+  allies,
+  departingAllies,
+  clearAllies,
+} from './allies.js';
+import {
+  hacking,
+  addCharge,
+  findHackTarget,
+  markHackTarget,
+  tryHack,
+  resetHacking,
+} from './hacking.js';
+import { updateSpawner, initialBurst, resetSpawner } from './spawner.js';
+import {
+  initHud,
+  updateHud,
+  showOverlay,
+  updateBossBar,
+  removeOverlay,
+  setHudVisible,
+} from './hud.js';
+import {
+  applyBossDamage,
+  boss,
+  completePolicyNodeAudit,
+  policyNode,
+  resetBoss,
+  resolvePolicyNode,
+  spawnBoss,
+  updateBoss,
+} from './boss.js';
+import { initProjectiles, updateProjectiles, clearProjectiles } from './projectiles.js';
+import {
+  addWeapon,
+  updateWeapons,
+  initWeapons,
+  resetWeapons,
+} from './weapons.js';
+import {
+  initEffects,
+  updateEffects,
+  fxFlash,
+  fxDebris,
+  clearEffects,
+} from './effects.js';
 import { COL } from './sprites.js';
-import { nearby, damageEnemy } from './enemies.js';
-import { initPickups, dropGem, updatePickups, gemList } from './pickups.js';
-import { xpForLevel, rollChoices, applyChoice } from './upgrades.js';
-import { stats } from './stats.js';
-import { initAudio, sfx, startBgm, stopBgm, toggleMute } from './audio.js';
+import {
+  initPickups,
+  dropGem,
+  updatePickups,
+  clearPickups,
+} from './pickups.js';
+import {
+  xpForLevel,
+  rollChoices,
+  applyChoice,
+  resetUpgrades,
+} from './upgrades.js';
+import { resetStats } from './stats.js';
+import {
+  initAudio,
+  sfx,
+  startBgm,
+  stopBgm,
+  setMuted,
+  toggleMute,
+} from './audio.js';
+import { APP_MODES, createRunState, transitionAppMode } from './session.js';
+import { prepareChapter } from './run-lifecycle.js';
+import { loadProfile, saveProfile } from './profile-store.js';
+import { applyTheme } from './theme.js';
+import { CHAPTERS } from './content/chapters.js';
+import { STAGES } from './content/stages.js';
+import { createStageDirector } from './stage-director.js';
+import { createStoryDirector } from './story-director.js';
+import {
+  advanceAudit,
+  clear as clearStoryUi,
+  openArchive,
+  showAuditCards,
+  showBriefing,
+  showComms,
+  showStoryResult,
+  showTitleScreen,
+  setStoryTheme,
+} from './story-ui.js';
 
 const canvas = document.getElementById('game');
-const R = createRenderer(canvas);
-const bg = createBackground(R.scene);
-initEnemies(R.scene);
+const renderer = createRenderer(canvas);
+const background = createBackground(renderer.scene);
+initEnemies(renderer.scene);
 initHud();
 
-const player = createPlayer(R.scene);
-initProjectiles(R.scene);
-initPickups(R.scene);
-initWeapons(R.scene);
-initEffects(R.scene);
-initAllies(R.scene);
-addWeapon('smg'); // 시작 무기
+const player = createPlayer(renderer.scene);
+initProjectiles(renderer.scene);
+initPickups(renderer.scene);
+initWeapons(renderer.scene);
+initEffects(renderer.scene);
+initAllies(renderer.scene);
 
-// 미사일 폭발: 반경 내 광역 데미지 + 플래시
-function onExplode(x, y, r, dmg) {
-  fxFlash(x, y, r, '#ffe600', 0.25);
-  sfx.boom();
-  for (const e of nearby(x, y, r)) {
-    if (Math.hypot(e.x - x, e.y - y) <= r + e.radius) damageEnemy(e, dmg);
-  }
+const app = { mode: APP_MODES.TITLE };
+const profileContext = loadProfile();
+const profile = profileContext.profile;
+
+function applySelectedTheme(themeId, persist = false) {
+  profile.settings.theme = themeId;
+  const theme = applyTheme(themeId);
+  renderer.setTheme(theme);
+  background.setTheme(theme);
+  setStoryTheme(theme.id);
+  if (persist) saveCurrentProfile();
+  return theme;
 }
 
-const BOSS_TIME = 480; // 8:00
+applySelectedTheme(profile.settings.theme);
+setMuted(profile.settings.muted);
 
-const game = {
-  state: 'title',
-  elapsed: 0,
-  kills: 0,
-  level: 1,
-  xp: 0,
-  bossSpawned: false,
+let chapter = STAGES.ch1;
+let runState = createRunState(chapter.id);
+let stageDirector = null;
+let storyDirector = null;
+let levelUpOverlay = null;
+let activeChoices = [];
+let currentHackTarget = null;
+let retrying = false;
+let lastDamageAt = -Infinity;
+
+const shake = { t: 0, mag: 0 };
+
+function saveCurrentProfile() {
+  return saveProfile(profile, profileContext);
+}
+
+function setAppMode(next) {
+  app.mode = transitionAppMode(app.mode, next);
+  setHudVisible(next === APP_MODES.PLAYING);
+}
+
+function clearOverlays() {
+  removeOverlay(levelUpOverlay);
+  levelUpOverlay = null;
+  activeChoices = [];
+}
+
+function resetStoryDirector() {
+  storyDirector?.reset();
+}
+
+const lifecycleServices = {
+  stopBgm,
+  clearStoryUi,
+  resetStoryDirector,
+  clearOverlays,
+  clearEnemies,
+  clearEnemyShots,
+  clearAllies,
+  clearProjectiles,
+  clearPickups,
+  clearEffects,
+  resetSpawner,
+  resetHacking,
+  resetWeapons,
+  resetUpgrades,
+  resetStats,
+  resetBoss,
+  resetPlayer: () => resetPlayer(player),
+  addWeapon,
 };
 
-let overlay = null;
+function storyEvent(triggerType, targetChapter = chapter) {
+  return targetChapter.storyEvents.find((event) => event.trigger.type === triggerType);
+}
 
-function fmtTime(t) {
-  const m = String(Math.floor(t / 60)).padStart(2, '0');
-  const s = String(Math.floor(t % 60)).padStart(2, '0');
-  return `${m}:${s}`;
+function archiveEntries() {
+  const auditEvent = storyEvent('boss-hp-ratio', CHAPTERS.ch1);
+  if (!profile.archiveEntryIds.includes(auditEvent.payload.archiveEntryId)) return [];
+  return [{
+    title: 'CHAPTER 1 — 감사 원문',
+    lines: auditEvent.payload.archiveLines,
+  }];
+}
+
+function presentStoryEvent(event) {
+  if (event.presentation === 'comms') return showComms(event);
+  if (event.presentation !== 'audit') {
+    return Promise.resolve({ status: 'completed' });
+  }
+
+  const entryId = event.payload.archiveEntryId;
+  const alreadySeen = profile.archiveEntryIds.includes(entryId);
+  const cards = alreadySeen
+    ? event.payload.cards.map((card) => ({
+      ...card,
+      lines: card.lines.filter((line) => !line.startsWith('이도:')),
+    }))
+    : event.payload.cards;
+  return showAuditCards(cards, {
+    alreadySeen,
+    onEnter: () => setAppMode(APP_MODES.AUDIT),
+    onExit: () => {
+      if (app.mode === APP_MODES.AUDIT) setAppMode(APP_MODES.PLAYING);
+    },
+  }).then((result) => {
+    if (result.status !== 'completed') return result;
+    completePolicyNodeAudit();
+    if (!profile.archiveEntryIds.includes(entryId)) {
+      profile.archiveEntryIds.push(entryId);
+    }
+    saveCurrentProfile();
+    return result;
+  });
+}
+
+function configureDirectors() {
+  storyDirector = createStoryDirector({
+    profile,
+    runState,
+    present: presentStoryEvent,
+    save: saveCurrentProfile,
+  });
+  stageDirector = createStageDirector({
+    chapter,
+    runState,
+    onStoryEvent: (event) => {
+      if (event.presentation === 'comms' || event.presentation === 'audit') {
+        storyDirector.enqueue(event, runState.elapsed);
+      }
+    },
+    onBossSpawn: () => {
+      spawnBoss(player);
+      addShake(6, 0.5);
+      sfx.boss();
+    },
+  });
+  stageDirector.signal('chapter-start');
+}
+
+function resetCamera() {
+  shake.t = 0;
+  shake.mag = 0;
+  renderer.camera.position.x = 0;
+  renderer.camera.position.y = 0;
+  background.update(0, 0);
+}
+
+function prepareRun(chapterId, isRetry) {
+  chapter = STAGES[chapterId];
+  runState = prepareChapter(chapterId, lifecycleServices);
+  retrying = isRetry;
+  lastDamageAt = -Infinity;
+  currentHackTarget = null;
+  resetCamera();
+  configureDirectors();
+}
+
+function renderBriefing() {
+  const content = storyEvent('chapter-start').payload;
+  showBriefing(content, {
+    retry: retrying,
+    onStart: beginPlaying,
+  });
+}
+
+function startChapter(chapterId = 'ch1') {
+  if (app.mode !== APP_MODES.TITLE) return false;
+  prepareRun(chapterId, false);
+  setAppMode(APP_MODES.BRIEFING);
+  renderBriefing();
+  return true;
+}
+
+function restartChapter() {
+  if (![APP_MODES.DEFEAT, APP_MODES.VICTORY].includes(app.mode)) return false;
+  const chapterId = runState.chapterId;
+  prepareRun(chapterId, true);
+  setAppMode(APP_MODES.BRIEFING);
+  renderBriefing();
+  return true;
+}
+
+function beginPlaying() {
+  clearStoryUi();
+  setAppMode(APP_MODES.PLAYING);
+  initialBurst(player, chapter.initialBurst ?? 14, chapter.spawner);
+  initAudio();
+  setMuted(profile.settings.muted);
+  startBgm();
 }
 
 function showTitle() {
-  game.state = 'title';
-  overlay = showOverlay(`
-    <h1 class="neon-cyan">NEON BREACH</h1>
-    <div class="stats">
-      보안 드론 군단을 뚫고 8분간 생존하라.<br>
-      적을 <span class="neon-mint">해킹</span>해 내 편으로 만들 수 있다.<br><br>
-      WASD / 방향키 — 이동 · 무기는 자동 발사<br>
-      SPACE — 해킹 (게이지 100%일 때, 근처 적을 아군화) · M — 음소거
-    </div>
-    <button id="startBtn">침투 개시</button>
-  `);
-  overlay.querySelector('#startBtn').addEventListener('click', () => {
-    overlay.remove();
-    overlay = null;
-    game.state = 'playing';
-    initialBurst(player);
-    initAudio();
-    startBgm();
+  clearStoryUi();
+  const content = storyEvent('chapter-start', CHAPTERS.ch1).payload;
+  const entries = archiveEntries();
+  showTitleScreen(content, {
+    nextChapterPending: profile.completedChapters.ch1 === true,
+    theme: profile.settings.theme,
+    onThemeChange: (themeId) => {
+      applySelectedTheme(themeId, true);
+      showTitle();
+    },
+    onStart: () => startChapter('ch1'),
+    onChallengeStart: () => startChapter('survival-1m'),
+    onArchive: entries.length > 0 ? openProfileArchive : null,
   });
 }
 
-function gameOver() {
-  game.state = 'gameover';
+function returnToTitle() {
   stopBgm();
-  sfx.lose();
-  overlay = showOverlay(`
-    <h1 class="neon-red">접속 종료</h1>
-    <div class="stats">생존 시간 ${fmtTime(game.elapsed)}<br>처치 ${game.kills}</div>
-    <button onclick="location.reload()">재접속</button>
-  `);
+  clearStoryUi();
+  clearOverlays();
+  setAppMode(APP_MODES.TITLE);
+  showTitle();
 }
 
-function victory() {
-  game.state = 'victory';
+function openProfileArchive() {
+  clearStoryUi();
+  setAppMode(APP_MODES.ARCHIVE);
+  openArchive(archiveEntries(), {
+    onClose: () => {
+      clearStoryUi();
+      setAppMode(APP_MODES.TITLE);
+      showTitle();
+    },
+  });
+}
+
+function showDefeat() {
+  stageDirector.signal('defeat');
+  setAppMode(APP_MODES.DEFEAT);
+  stopBgm();
+  clearStoryUi();
+  sfx.lose();
+  const result = {
+    ...storyEvent('defeat').payload,
+    resultLines: [
+      `생존 시간 ${formatTime(runState.elapsed)}`,
+      `차단 ${runState.blocks}`,
+    ],
+  };
+  showStoryResult(result, {
+    onReplay: restartChapter,
+    replayLabel: '다시 시도',
+  });
+}
+
+function renderVictory() {
+  clearStoryUi();
+  const result = {
+    ...storyEvent('victory').payload,
+    ...(chapter.id === 'ch1' ? { dispatchedDroneCount: runState.dispatchedDroneCount } : {}),
+  };
+  showStoryResult(result, {
+    onPrimary: returnToTitle,
+    onReplay: restartChapter,
+    communicationMode: profile.communicationMode,
+    onCommunicationMode: (mode) => {
+      profile.communicationMode = mode;
+      saveCurrentProfile();
+      renderVictory();
+    },
+  });
+}
+
+function showVictory() {
+  stageDirector.signal('victory');
+  if (chapter.persistCompletion !== false) {
+    profile.completedChapters[runState.chapterId] = true;
+    saveCurrentProfile();
+  }
+  setAppMode(APP_MODES.VICTORY);
   stopBgm();
   sfx.win();
-  overlay = showOverlay(`
-    <h1 class="neon-mint">시스템 장악 완료</h1>
-    <div class="stats">클리어 시간 ${fmtTime(game.elapsed)}<br>처치 ${game.kills}</div>
-    <button onclick="location.reload()">재접속</button>
-  `);
+  renderVictory();
 }
 
 function openLevelUp() {
-  game.state = 'levelup';
+  setAppMode(APP_MODES.LEVELUP);
   sfx.levelup();
-  const choices = rollChoices();
-  const cardsHtml = choices.map((c, i) => `
-    <div class="card" data-i="${i}">
-      <div class="tag">${c.tag}</div>
-      <div class="title">${c.title}</div>
-      <div class="desc">${c.desc}</div>
+  activeChoices = rollChoices();
+  const cardsHtml = activeChoices.map((choice, index) => `
+    <div class="card" data-i="${index}">
+      <div class="tag">${choice.tag}</div>
+      <div class="title">${choice.title}</div>
+      <div class="desc">${choice.desc}</div>
     </div>
   `).join('');
-  overlay = showOverlay(`
-    <h1 class="neon-cyan" style="font-size:26px;">시스템 업그레이드</h1>
+  levelUpOverlay = showOverlay(`
+    <h1 class="accent-primary" style="font-size:26px;">현장 장비 보강</h1>
     <div class="cards">${cardsHtml}</div>
   `);
-  overlay.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('click', () => {
-      applyChoice(choices[+card.dataset.i], player);
-      overlay.remove();
-      overlay = null;
-      game.state = 'playing';
-    });
+  levelUpOverlay.querySelectorAll('.card').forEach((card) => {
+    card.addEventListener('click', () => chooseUpgrade(Number(card.dataset.i)));
   });
 }
 
-// 화면 흔들림
-const shake = { t: 0, mag: 0 };
-function addShake(mag, dur = 0.25) {
-  shake.mag = Math.max(shake.mag, mag);
-  shake.t = Math.max(shake.t, dur);
+function chooseUpgrade(index) {
+  if (app.mode !== APP_MODES.LEVELUP || !activeChoices[index]) return false;
+  applyChoice(activeChoices[index], player);
+  clearOverlays();
+  setAppMode(APP_MODES.PLAYING);
+  return true;
 }
 
-// 오토파일럿 (밸런스 자동 검증용): 적을 피해 다니며 젬 방향으로 유영
-function autopilotAxis() {
-  let fx = 0, fy = 0;
-  for (const e of nearby(player.x, player.y, 90)) {
-    const dx = player.x - e.x, dy = player.y - e.y;
-    const d = Math.hypot(dx, dy) || 1;
-    const w = (90 - d) * (e.boss ? 3 : 1);
-    fx += (dx / d) * w;
-    fy += (dy / d) * w;
-  }
-  // 위협이 적으면 가까운 젬 수집
-  if (Math.hypot(fx, fy) < 30) {
-    let bg2 = null, bd = 150 * 150;
-    for (const g of gemList()) {
-      const d = (g.x - player.x) ** 2 + (g.y - player.y) ** 2;
-      if (d < bd) { bd = d; bg2 = g; }
-    }
-    if (bg2) {
-      const d = Math.sqrt(bd) || 1;
-      fx += ((bg2.x - player.x) / d) * 25;
-      fy += ((bg2.y - player.y) / d) * 25;
-    }
-  }
-  // 완만한 원형 드리프트
-  fx += Math.cos(game.elapsed * 0.5) * 14;
-  fy += Math.sin(game.elapsed * 0.5) * 14;
-  const len = Math.hypot(fx, fy) || 1;
-  return { x: fx / len, y: fy / len };
+function formatTime(value) {
+  const minutes = String(Math.floor(value / 60)).padStart(2, '0');
+  const seconds = String(Math.floor(value % 60)).padStart(2, '0');
+  return `${minutes}:${seconds}`;
 }
 
-// 게임 로직 1틱 (렌더링과 분리 — 디버그 스텝에서도 사용)
+function addShake(magnitude, duration = 0.25) {
+  shake.mag = Math.max(shake.mag, magnitude);
+  shake.t = Math.max(shake.t, duration);
+}
+
+function onExplode(x, y, radius, damage) {
+  fxFlash(x, y, radius, '#ffe600', 0.25);
+  sfx.boom();
+  for (const enemy of nearby(x, y, radius)) {
+    if (Math.hypot(enemy.x - x, enemy.y - y) <= radius + enemy.radius) {
+      damageEnemy(enemy, damage);
+    }
+  }
+}
+
+function handleAppInput() {
+  if (consumePressed('KeyM')) {
+    profile.settings.muted = toggleMute();
+    saveCurrentProfile();
+  }
+  if (app.mode === APP_MODES.AUDIT && consumePressed('Space')) {
+    advanceAudit();
+  }
+}
+
+function handleHackInput() {
+  currentHackTarget = findHackTarget(player, policyNode);
+  markHackTarget(currentHackTarget);
+  if (!consumePressed('Space')) return;
+
+  if (currentHackTarget?.kind === 'policy-node' && storyDirector.isBusy()) return;
+
+  const result = tryHack(player, currentHackTarget, { resolvePolicyNode });
+  if (!result) return;
+  sfx.hack();
+
+  if (result.kind === 'policy-node') {
+    clearStoryUi();
+    stageDirector.signal('boss-hp-ratio', { ratio: 0.5 });
+    return;
+  }
+
+  runState.hackSuccessCount += 1;
+  if (result.allyResult.dispatched) runState.dispatchedDroneCount += 1;
+  if (runState.hackSuccessCount === 1) stageDirector.signal('first-hack');
+  stageDirector.signal('hack-count', { count: runState.hackSuccessCount });
+}
+
+function updateCamera(dt) {
+  shake.t = Math.max(0, shake.t - dt);
+  if (shake.t <= 0) shake.mag = 0;
+  const sx = shake.mag * (Math.random() * 2 - 1) * (shake.t > 0 ? 1 : 0);
+  const sy = shake.mag * (Math.random() * 2 - 1) * (shake.t > 0 ? 1 : 0);
+  renderer.camera.position.x += (
+    (player.x - renderer.camera.position.x) * Math.min(1, dt * 8)
+    + sx * dt * 20
+  );
+  renderer.camera.position.y += (
+    (player.y - renderer.camera.position.y) * Math.min(1, dt * 8)
+    + sy * dt * 20
+  );
+  background.update(renderer.camera.position.x, renderer.camera.position.y);
+}
+
+function updateHudState() {
+  updateHud({
+    elapsed: runState.elapsed,
+    level: runState.level,
+    blocks: runState.blocks,
+    xpRatio: runState.xp / xpForLevel(runState.level),
+    hp: player.hp,
+    maxHp: player.maxHp,
+    hackGauge: hacking.gauge,
+    allyCount: allies.length,
+    dispatchedDroneCount: runState.dispatchedDroneCount,
+    hackTarget: currentHackTarget,
+  });
+  updateBossBar(boss.active ? boss.hp / boss.maxHp : null);
+}
+
 function tick(dt) {
-  if (game.state !== 'playing') return;
-  game.elapsed += dt;
-
-  const prevHp = player.hp;
-  player.update(dt, window.__autopilot ? autopilotAxis() : axis());
-
-  // 보스 등장 (10:00) — 일반 스폰 정지
-  if (!game.bossSpawned && game.elapsed >= BOSS_TIME) {
-    game.bossSpawned = true;
-    spawnBoss(player);
-    addShake(6, 0.5);
-    sfx.boss();
+  if (app.mode !== APP_MODES.PLAYING) return;
+  const previousElapsed = runState.elapsed;
+  runState.elapsed += dt;
+  stageDirector.advance(previousElapsed, runState.elapsed);
+  if (
+    chapter.completion?.type === 'survive'
+    && runState.elapsed >= chapter.completion.duration
+  ) {
+    showVictory();
+    return;
   }
-  updateSpawner(dt, game.elapsed, player, !game.bossSpawned);
+
+  const previousHp = player.hp;
+  player.update(dt, axis());
+  handleHackInput();
+  updateSpawner(
+    dt,
+    runState.elapsed,
+    player,
+    chapter.waves,
+    !runState.bossSpawned,
+    chapter.spawner,
+  );
   updateEnemies(dt, player);
   updateBoss(dt, player);
   updateWeapons(dt, player);
@@ -191,82 +538,141 @@ function tick(dt) {
   updateAllies(dt, player);
   updateEffects(dt);
 
-  // 해킹: Space 발동 (오토파일럿은 자동 발동)
-  if (wasPressed('Space') || (window.__autopilot && hacking.gauge >= 100)) {
-    if (tryHack(player)) sfx.hack();
+  if (player.hp < previousHp) {
+    lastDamageAt = runState.elapsed;
+    addShake(3, 0.2);
+    sfx.hurt();
   }
 
-  // 음소거 토글
-  if (wasPressed('KeyM')) toggleMute();
-
-  // 피격 감지 → 흔들림 + 사운드
-  if (player.hp < prevHp) { addShake(3, 0.2); sfx.hurt(); }
-
-  // 사망 이벤트 → 젬 드랍 + 해킹 충전 + 파편 (+보스 처치 시 승리)
   let bossKilled = false;
-  for (const d of deathEvents) {
-    game.kills++;
-    fxDebris(d.x, d.y, d.boss ? COL.yellow : COL.magenta);
+  for (const death of deathEvents) {
+    runState.blocks += 1;
+    fxDebris(death.x, death.y, death.boss ? COL.yellow : COL.magenta);
     sfx.kill();
-    if (d.boss) { bossKilled = true; continue; }
-    dropGem(d.x, d.y, d.xp);
-    addCharge(d.elite);
+    if (death.boss) {
+      bossKilled = true;
+      continue;
+    }
+    dropGem(death.x, death.y, death.xp);
+    addCharge(death.elite);
   }
   deathEvents.length = 0;
 
-  // XP 획득 → 레벨업
   const gained = updatePickups(dt, player);
   if (gained > 0) sfx.pickup();
-  game.xp += gained;
-  if (game.xp >= xpForLevel(game.level)) {
-    game.xp -= xpForLevel(game.level);
-    game.level++;
+  runState.xp += gained;
+  if (runState.xp >= xpForLevel(runState.level)) {
+    runState.xp -= xpForLevel(runState.level);
+    runState.level += 1;
     openLevelUp();
   }
 
-  if (bossKilled) { victory(); return; }
-  if (player.dead) { gameOver(); return; }
-
-  // 카메라 추적 + 흔들림
-  shake.t = Math.max(0, shake.t - dt);
-  if (shake.t <= 0) shake.mag = 0;
-  const sx = shake.mag * (Math.random() * 2 - 1) * (shake.t > 0 ? 1 : 0);
-  const sy = shake.mag * (Math.random() * 2 - 1) * (shake.t > 0 ? 1 : 0);
-  R.camera.position.x += (player.x - R.camera.position.x) * Math.min(1, dt * 8) + sx * dt * 20;
-  R.camera.position.y += (player.y - R.camera.position.y) * Math.min(1, dt * 8) + sy * dt * 20;
-  bg.update(R.camera.position.x, R.camera.position.y);
-
-  updateHud({
-    elapsed: game.elapsed,
-    level: game.level,
-    kills: game.kills,
-    xpRatio: game.xp / xpForLevel(game.level),
-    hp: player.hp,
-    maxHp: player.maxHp,
-    hackGauge: hacking.gauge,
+  if (bossKilled) {
+    showVictory();
+    return;
+  }
+  if (player.dead) {
+    showDefeat();
+    return;
+  }
+  const recentlyHit = runState.elapsed - lastDamageAt <= 2;
+  const nearbyThreat = nearby(player.x, player.y, 90).length > 0;
+  storyDirector.update({
+    now: runState.elapsed,
+    dangerous: recentlyHit || nearbyThreat,
+    presentationAvailable: app.mode === APP_MODES.PLAYING,
   });
-  updateBossBar(boss.active ? boss.hp / boss.maxHp : null);
+
+  updateCamera(dt);
+  updateHudState();
 }
 
 showTitle();
 
-let last = performance.now();
+let lastFrame = performance.now();
 function loop(now) {
-  const dt = Math.min((now - last) / 1000, 0.05);
-  last = now;
+  const dt = Math.min((now - lastFrame) / 1000, 0.05);
+  lastFrame = now;
+  handleAppInput();
   tick(dt);
   flushInput();
-  R.render();
+  renderer.render();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-// 디버그/치트 훅 (개발용): 패널이 hidden이라 rAF가 멈춰도 수동 진행 가능
-window.__game = {
-  game, player, enemies, spawnEnemy, allies, hacking, tryHack,
-  step(seconds = 1) {
-    const n = Math.round(seconds * 60);
-    for (let i = 0; i < n; i++) tick(1 / 60);
-    R.render();
-  },
-};
+if (import.meta.env.DEV) {
+  window.__game = {
+    startChapter,
+    restartChapter,
+    step(seconds = 1) {
+      const frames = Math.round(seconds * 60);
+      for (let index = 0; index < frames; index += 1) tick(1 / 60);
+      renderer.render();
+    },
+    chooseUpgrade,
+    setElapsed(value) {
+      runState.elapsed = Math.max(0, Number(value) || 0);
+    },
+    setBossHpRatio(ratio) {
+      if (!boss.active) return false;
+      const targetHp = boss.maxHp * Math.max(0, Math.min(1, ratio));
+      if (targetHp >= boss.ref.hp) return false;
+      applyBossDamage(boss.ref.hp - targetHp);
+      return true;
+    },
+    setPlayerHp(hp) {
+      player.invuln = 0;
+      player.hp = Math.max(0, Math.min(player.maxHp, hp));
+      player.dead = player.hp <= 0;
+    },
+    setPlayerPosition(x, y) {
+      player.x = Number(x) || 0;
+      player.y = Number(y) || 0;
+      player.mesh.position.set(player.x, player.y, 1);
+    },
+    spawnEnemies(count, type = 'rushbot') {
+      for (let index = 0; index < count; index += 1) {
+        const angle = (index / count) * Math.PI * 2;
+        spawnEnemy(
+          type,
+          player.x + Math.cos(angle) * 130,
+          player.y + Math.sin(angle) * 130,
+        );
+      }
+    },
+    snapshot() {
+      return structuredClone({
+        appMode: app.mode,
+        runState,
+        player: {
+          x: player.x,
+          y: player.y,
+          hp: player.hp,
+          maxHp: player.maxHp,
+          dead: player.dead,
+        },
+        enemyCount: enemies.length,
+        allyCount: allies.length,
+        departingAllyCount: departingAllies.length,
+        hackGauge: hacking.gauge,
+        boss: {
+          active: boss.active,
+          hp: boss.hp,
+          maxHp: boss.maxHp,
+          policyLocked: boss.policyLocked,
+          policyResolved: boss.policyResolved,
+        },
+        policyNode: {
+          active: policyNode.active,
+          resolving: policyNode.resolving,
+          x: policyNode.x,
+          y: policyNode.y,
+        },
+        storyBusy: storyDirector?.isBusy() ?? false,
+        profile,
+        hackTargetKind: currentHackTarget?.kind ?? null,
+      });
+    },
+  };
+}

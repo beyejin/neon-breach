@@ -31,7 +31,6 @@ export const WEAPON_DEFS = {
       const target = nearestEnemy(player.x, player.y, 200);
       if (!target) return false;
       const dx = target.x - player.x, dy = target.y - player.y;
-      const d = Math.hypot(dx, dy) || 1;
       const dmg = (8 + 3 * (lv - 1)) * stats.dmgMul;
       const shots = lv >= 3 ? 2 : 1;
       sfx.shoot();
@@ -50,11 +49,11 @@ export const WEAPON_DEFS = {
   nova: {
     name: 'EMP 노바',
     desc: '주기적으로 주변 전체에 광역 데미지',
-    cooldown: (lv) => 3.5,
+    cooldown: (_lv) => 3.5,
     fire(lv, player) {
       const r = 60 + 8 * (lv - 1);
       const dmg = (12 + 4 * (lv - 1)) * stats.dmgMul;
-      fxRing(player.x, player.y, r, '#00e5ff', 0.4);
+      fxRing(player.x, player.y, r, '#d97835', 0.4);
       sfx.nova();
       for (const e of nearby(player.x, player.y, r)) {
         if (Math.hypot(e.x - player.x, e.y - player.y) <= r + e.radius) damageEnemy(e, dmg);
@@ -65,7 +64,7 @@ export const WEAPON_DEFS = {
   missile: {
     name: '유도 미사일',
     desc: '적을 추적해 폭발하는 미사일 발사',
-    cooldown: (lv) => 2.2,
+    cooldown: (_lv) => 2.2,
     fire(lv, player) {
       if (enemies.length === 0) return false;
       const count = 1 + Math.floor(lv / 2);
@@ -85,14 +84,14 @@ export const WEAPON_DEFS = {
   laser: {
     name: '관통 레이저',
     desc: '직선상의 모든 적을 관통하는 빔',
-    cooldown: (lv) => 2.8,
+    cooldown: (_lv) => 2.8,
     fire(lv, player) {
       const target = nearestEnemy(player.x, player.y, 260);
       if (!target) return false;
       const a = Math.atan2(target.y - player.y, target.x - player.x);
       const LEN = 260;
       const dmg = (15 + 5 * (lv - 1)) * stats.dmgMul;
-      fxBeam(player.x, player.y, a, LEN, 5, '#ff2d78', 0.15);
+      fxBeam(player.x, player.y, a, LEN, 5, '#b64a3f', 0.15);
       sfx.laser();
       const dirX = Math.cos(a), dirY = Math.sin(a);
       for (const e of [...enemies]) {
@@ -182,5 +181,8 @@ export function updateWeapons(dt, player, ctx = {}) {
 }
 
 export function resetWeapons() {
+  for (const weapon of ownedWeapons) {
+    for (const mesh of weapon.state?.meshes || []) mesh.removeFromParent();
+  }
   ownedWeapons.length = 0;
 }

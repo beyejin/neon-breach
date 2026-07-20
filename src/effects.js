@@ -121,3 +121,11 @@ export function updateEffects(dt) {
     }
   }
 }
+
+export function clearEffects() {
+  while (active.length) {
+    const fx = active.pop();
+    fx.mesh.visible = false;
+    pools[fx.kind].push(fx);
+  }
+}
