@@ -15,7 +15,12 @@ export const deathEvents = [];    // 이번 프레임 사망 이벤트 { x, y, x
 const pool = new Map();           // type → mesh[]
 
 let sceneRef = null;
+let bossDamageHandler = null;
 export function initEnemies(scene) { sceneRef = scene; }
+
+export function setBossDamageHandler(handler) {
+  bossDamageHandler = handler;
+}
 
 function getMesh(type) {
   const list = pool.get(type) || [];
@@ -32,7 +37,7 @@ function releaseMesh(type, mesh) {
   (pool.get(type) || pool.set(type, []).get(type)).push(mesh);
 }
 
-export function spawnEnemy(type, x, y, hpMul = 1) {
+export function spawnEnemy(type, x, y, hpMul = 1, speedMul = 1) {
   const t = ENEMY_TYPES[type];
   const mesh = getMesh(type);
   mesh.visible = true;
@@ -40,7 +45,7 @@ export function spawnEnemy(type, x, y, hpMul = 1) {
   const e = {
     type, x, y,
     hp: t.hp * hpMul, maxHp: t.hp * hpMul,
-    speed: t.speed * (0.9 + Math.random() * 0.2),
+    speed: t.speed * speedMul * (0.9 + Math.random() * 0.2),
     dmg: t.dmg, radius: t.radius, xp: t.xp,
     elite: !!t.elite, boss: !!t.boss, range: t.range || 0,
     flash: 0, shootCd: 0,
@@ -119,11 +124,17 @@ export function updateEnemies(dt, player) {
     e.flash = Math.max(0, e.flash - dt);
     e.mesh.position.set(e.x, e.y, 0.5);
     e.mesh.scale.x = dx > 0 ? 1 : -1;
-    e.mesh.material.color.setHex(e.flash > 0 ? 0xff6666 : 0xffffff);
+    e.mesh.material.color.setHex(e.hackTarget ? 0x00ffc8 : (e.flash > 0 ? 0xff6666 : 0xffffff));
+    e.mesh.scale.y = e.hackTarget ? 1.2 : 1;
   }
 }
 
 export function damageEnemy(e, n) {
+  if (e.boss && bossDamageHandler) return bossDamageHandler(e, n);
+  return damageEnemyRaw(e, n);
+}
+
+export function damageEnemyRaw(e, n) {
   if (e.hp <= 0) return false;
   e.hp -= n;
   e.flash = 0.08;

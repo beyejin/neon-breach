@@ -8,14 +8,18 @@ export function initAudio() {
   if (ctx) { ctx.resume(); return; }
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   master = ctx.createGain();
-  master.gain.value = 0.5;
+  master.gain.value = muted ? 0 : 0.5;
   master.connect(ctx.destination);
 }
 
-export function toggleMute() {
-  muted = !muted;
+export function setMuted(value) {
+  muted = value === true;
   if (master) master.gain.value = muted ? 0 : 0.5;
   return muted;
+}
+
+export function toggleMute() {
+  return setMuted(!muted);
 }
 
 function env(gainNode, t0, peak, dur) {

@@ -522,6 +522,7 @@ window.__game.chooseUpgrade(index)
 window.__game.setElapsed(seconds)
 window.__game.setBossHpRatio(ratio)
 window.__game.setPlayerHp(hp)
+window.__game.setPlayerPosition(x, y)
 window.__game.spawnEnemies(count, type)
 window.__game.snapshot()
 ```

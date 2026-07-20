@@ -17,11 +17,20 @@ export function axis() {
   if (keys.has('KeyW') || keys.has('ArrowUp')) y += 1;
   if (keys.has('KeyS') || keys.has('ArrowDown')) y -= 1;
   const len = Math.hypot(x, y);
-  return len > 0 ? { x: x / len, y: y / len } : { x: 0, y: 0 };
+  const running = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  return len > 0
+    ? { x: x / len, y: y / len, running }
+    : { x: 0, y: 0, running: false };
 }
 
 export function wasPressed(code) {
   return pressed.has(code);
+}
+
+export function consumePressed(code) {
+  if (!pressed.has(code)) return false;
+  pressed.delete(code);
+  return true;
 }
 
 // 매 프레임 끝에 호출

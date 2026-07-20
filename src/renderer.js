@@ -1,4 +1,4 @@
-// Three.js 렌더링 전담: 직교 카메라 탑다운 + 네온 블룸
+// Three.js 렌더링 전담: 직교 카메라 탑다운 + 절제된 광원 효과
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -9,7 +9,7 @@ export const VIEW_H = 270; // 세로 기준 월드 단위(가상 픽셀) — 픽
 
 export function createRenderer(canvas) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x05060a);
+  scene.background = new THREE.Color(0x11140f);
 
   const aspect = window.innerWidth / window.innerHeight;
   const camera = new THREE.OrthographicCamera(
@@ -27,9 +27,9 @@ export function createRenderer(canvas) {
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.55,  // strength
-    0.25,  // radius
-    0.6    // threshold — 어두운 배경/스프라이트는 제외, 밝은 네온 색만 발광
+    0.18,  // strength
+    0.18,  // radius
+    0.82   // threshold — 경고등처럼 가장 밝은 요소만 약하게 발광
   );
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
@@ -46,6 +46,12 @@ export function createRenderer(canvas) {
   return {
     scene,
     camera,
+    setTheme(theme) {
+      scene.background.set(theme.canvas.background);
+      bloom.strength = theme.canvas.bloom.strength;
+      bloom.radius = theme.canvas.bloom.radius;
+      bloom.threshold = theme.canvas.bloom.threshold;
+    },
     render() { composer.render(); },
   };
 }

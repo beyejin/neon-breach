@@ -1,0 +1,258 @@
+export const CHAPTER_1 = Object.freeze({
+  id: 'ch1',
+  title: '8분의 유예',
+  duration: 480,
+  waves: [
+    { until: 48, rates: { rushbot: 2.8 } },
+    { until: 96, rates: { rushbot: 3.0, shooterbot: 0.5 } },
+    { until: 144, rates: { rushbot: 3.4, shooterbot: 0.7 } },
+    { until: 192, rates: { rushbot: 2.2, shooterbot: 0.8, tankbot: 0.3 } },
+    { until: 264, rates: { rushbot: 2.6, shooterbot: 1.0, tankbot: 0.45 } },
+    { until: 336, rates: { rushbot: 3.2, shooterbot: 1.2, tankbot: 0.6 } },
+    { until: 408, rates: { rushbot: 4.0, shooterbot: 1.5, tankbot: 0.8 } },
+    { until: 480, rates: { rushbot: 5.0, shooterbot: 2.0, tankbot: 1.0 } },
+  ],
+  boss: {
+    id: 'boss',
+    spawnAt: 480,
+    policyNodeRatio: 0.5,
+  },
+  storyEvents: [
+    {
+      id: 'ch1.start.briefing',
+      trigger: { type: 'chapter-start' },
+      presentation: 'briefing',
+      replay: 'always',
+      communication: 'required',
+      priority: 100,
+      maxDelay: 0,
+      payload: {
+        productTitle: '영점손해사정',
+        chapterTitle: 'CHAPTER 1: 8분의 유예',
+        statusLines: [
+          'NEON // 동부 7구역',
+          '구조망에서 제외된 시민 124명',
+          '감사 집행체(보스) 도착까지 08:00',
+        ],
+        dialogue: [
+          {
+            speaker: '해주',
+            lines: ['17번 버스가 교차로에 갇혔어요.', '승객 23명이 타고 있습니다.'],
+          },
+          {
+            speaker: '나리',
+            lines: ['이도, 8분 뒤면 이 구역의 구조 권한이 끊겨.', '그 전에 코어를 열어야 해.'],
+          },
+          {
+            speaker: '이도',
+            lines: ['원래 격리는 15분이면 끝나야 해.', '누가 규칙을 바꿨는지 확인할게.'],
+          },
+        ],
+        retryDialogue: [
+          { speaker: '나리', lines: ['다시 연결됐어.', '보스가 오기까지 8분 남았어.'] },
+          { speaker: '이도', lines: ['이번에는 중앙 기록까지 확인할게.'] },
+        ],
+        tutorial: [
+          '자동 공격 — 접근하는 보안 드론 차단',
+          'SPACE — 표식된 드론을 복구해 아군으로 전환',
+          'SHIFT — 이동 중 누르면 달리기',
+        ],
+      },
+    },
+    {
+      id: 'ch1.time.0048',
+      trigger: { type: 'time', at: 48 },
+      presentation: 'comms',
+      replay: 'profile-once',
+      communication: 'tutorial',
+      priority: 50,
+      maxDelay: 8,
+      payload: {
+        captions: [
+          { speaker: '나리', lines: ['공격은 자동으로 나가.', '표시가 뜬 드론은 SPACE로 복구해.'] },
+          { speaker: '이도', lines: ['막는 건 자동, 되돌리는 건 직접.', '예전 방식 그대로네.'] },
+        ],
+      },
+    },
+    {
+      id: 'ch1.hack.first',
+      trigger: { type: 'first-hack' },
+      presentation: 'comms',
+      replay: 'profile-once',
+      communication: 'core',
+      priority: 75,
+      maxDelay: 8,
+      payload: {
+        captions: [
+          { speaker: 'SYSTEM', lines: ['구조 기능을 되살렸습니다.', '복구된 드론이 17번 버스로 이동합니다.'] },
+          { speaker: '해주', lines: ['교차로만 열어 줘. 운전은 내가 해.'] },
+        ],
+      },
+    },
+    {
+      id: 'ch1.time.0144',
+      trigger: { type: 'time', at: 144 },
+      presentation: 'comms',
+      replay: 'profile-once',
+      communication: 'core',
+      priority: 70,
+      maxDelay: 8,
+      payload: {
+        captions: [
+          { speaker: '나리', lines: ['이 드론의 보안 키가', '네가 만든 키와 같아.'] },
+          { speaker: '이도', lines: ['누가 복사했는지부터 확인해.', '원본은 아닐 거야.'] },
+        ],
+      },
+    },
+    {
+      id: 'ch1.time.0264',
+      trigger: { type: 'time', at: 264 },
+      presentation: 'comms',
+      replay: 'profile-once',
+      communication: 'core',
+      priority: 70,
+      maxDelay: 8,
+      payload: {
+        captions: [
+          { speaker: '세진', lines: ['동부 7구역에 전력을 보내면', '병원 비상 전력이 8% 아래로 떨어진다.'] },
+          { speaker: '이도', lines: ['그래서 시민 124명을', '아무도 못 보는 대기 명단에 숨겼습니까?'] },
+          { speaker: '해주', lines: ['17번 버스는 11시간째', '충전 전력을 받지 못했습니다.'] },
+        ],
+      },
+    },
+    {
+      id: 'ch1.hack.0006',
+      trigger: { type: 'hack-count', count: 6 },
+      presentation: 'comms',
+      replay: 'profile-once',
+      communication: 'core',
+      priority: 80,
+      maxDelay: 8,
+      payload: {
+        captions: [
+          { speaker: 'SYSTEM', lines: ['동시에 연결할 수 있는 드론은 5대입니다.', '한 대를 현장 구조로 보내야 합니다.'] },
+          { speaker: '이도', lines: ['가장 먼저 복구한 드론을', '17번 버스 쪽으로 보내.'] },
+          { speaker: '해주', lines: ['드론 받았습니다.', '승객 23명과 북쪽 길로 이동할게요.'] },
+        ],
+      },
+    },
+    {
+      id: 'ch1.time.0408',
+      trigger: { type: 'time', at: 408 },
+      presentation: 'comms',
+      replay: 'profile-once',
+      communication: 'core',
+      priority: 80,
+      maxDelay: 8,
+      payload: {
+        captions: [
+          { speaker: '나리', lines: ['보스 안에 삭제 전 기록이 있어.'] },
+          { speaker: '이도', lines: ['전부 가져와.', '내가 승인한 기록도 빼지 마.'] },
+        ],
+      },
+    },
+    {
+      id: 'ch1.boss.spawn',
+      trigger: { type: 'boss-spawn' },
+      presentation: 'comms',
+      replay: 'always',
+      communication: 'required',
+      priority: 100,
+      maxDelay: 0,
+      payload: {
+        captions: [
+          {
+            speaker: '판정 코어',
+            lines: ['영점 지침 4조.', '확인되지 않은 피해는 피해 통계에서 제외한다.'],
+          },
+          { speaker: 'SYSTEM', lines: ['동부 7구역의 구조 권한을 끊기 시작합니다.'] },
+        ],
+      },
+    },
+    {
+      id: 'ch1.boss.policy.050',
+      trigger: { type: 'boss-hp-ratio', ratio: 0.5 },
+      presentation: 'audit',
+      replay: 'always',
+      communication: 'required',
+      priority: 110,
+      maxDelay: 0,
+      payload: {
+        archiveEntryId: 'ch1.audit.raw',
+        cards: [
+          {
+            heading: '누가 격리 규칙을 만들었나 1/2',
+            lines: [
+              '15분 격리 규칙 작성 — 이도',
+              '신원 확인 실패 → 담당자 확인',
+              '담당자가 없으면 15분 격리',
+              '15분 뒤 현장 담당자에게 넘김',
+              '이도: 누가 바꾼 게 아니었어.',
+              '내가 만든 빈틈이야.',
+            ],
+          },
+          {
+            heading: '누가 시민을 대기 명단에 숨겼나 2/2',
+            lines: [
+              '현장에서 확인할 수 있는 인원 — 시간당 12명',
+              '12명을 넘으면 대기 명단으로 이동',
+              '대기 명단은 시민에게 공개하지 않음',
+              '신원이 확인되어야 대기 해제',
+              '운영 승인 — 강세진',
+              'SYSTEM: 신원을 증명할 방법이 없으면',
+              '계속 대기해야 합니다.',
+              '해주: 저는 11시간째 기다리고 있어요.',
+            ],
+          },
+        ],
+        archiveLines: [
+          '15분 격리 규칙 작성자 = 이도',
+          '담당자 확인 불가 = 15분 격리',
+          '15분 경과 = 현장 담당자에게 전달',
+          '현장 확인 가능 인원 = 시간당 12명',
+          '12명 초과 요청 = 대기 명단으로 이동',
+          '대기 해제 조건 = 신원 확인',
+          '대기 명단 공개 범위 = 운영사 내부만',
+          '운영 설정 승인자 = 강세진',
+        ],
+      },
+    },
+    {
+      id: 'ch1.victory',
+      trigger: { type: 'victory' },
+      presentation: 'result',
+      replay: 'always',
+      communication: 'required',
+      priority: 120,
+      maxDelay: 0,
+      payload: {
+        title: 'CHAPTER 1 COMPLETE',
+        subtitle: '8분의 유예',
+        dialogue: [
+          { speaker: 'SYSTEM', lines: ['동부 7구역의 구조 권한을 지켰습니다.', '시민 124명이 구조 대상에 포함됩니다.'] },
+          { speaker: '해주', lines: ['17번 버스가 교차로를 통과했습니다.', '산소가 필요한 승객부터 병원으로 갈게요.'] },
+          { speaker: '이도', lines: ['기록을 지우지 마.', '내가 승인한 내용도 함께 남겨.'] },
+          { speaker: '나리', lines: ['기록을 남긴 건 시작일 뿐이야.', '이제 누가 책임질지 밝혀야 해.'] },
+        ],
+        resultLines: [
+          '중앙의 자동 명령 일부 중지',
+          '동부 7구역 구조망 정상 작동',
+          'CHAPTER 2 — 다음 장 준비 중',
+        ],
+      },
+    },
+    {
+      id: 'ch1.defeat',
+      trigger: { type: 'defeat' },
+      presentation: 'result',
+      replay: 'always',
+      communication: 'required',
+      priority: 120,
+      maxDelay: 0,
+      payload: {
+        title: '접속 종료',
+        action: '다시 시도',
+      },
+    },
+  ],
+});

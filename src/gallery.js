@@ -4,7 +4,7 @@ import { makeSprite, spriteSize, frameCount } from './sprites.js';
 
 const R = createRenderer(document.getElementById('game'));
 
-const names = ['player', 'rushbot', 'shooterbot', 'tankbot', 'elite', 'boss', 'gem', 'bullet', 'missile', 'spike', 'enemybullet'];
+const names = ['player', 'nari', 'haeju', 'rushbot', 'shooterbot', 'tankbot', 'elite', 'boss', 'gem', 'bullet', 'missile', 'spike', 'enemybullet'];
 const SCALE = 4;
 let x = -210;
 for (const name of names) {

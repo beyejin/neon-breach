@@ -53,7 +53,7 @@ export const WEAPON_DEFS = {
     fire(lv, player) {
       const r = 60 + 8 * (lv - 1);
       const dmg = (12 + 4 * (lv - 1)) * stats.dmgMul;
-      fxRing(player.x, player.y, r, '#00e5ff', 0.4);
+      fxRing(player.x, player.y, r, '#d97835', 0.4);
       sfx.nova();
       for (const e of nearby(player.x, player.y, r)) {
         if (Math.hypot(e.x - player.x, e.y - player.y) <= r + e.radius) damageEnemy(e, dmg);
@@ -91,7 +91,7 @@ export const WEAPON_DEFS = {
       const a = Math.atan2(target.y - player.y, target.x - player.x);
       const LEN = 260;
       const dmg = (15 + 5 * (lv - 1)) * stats.dmgMul;
-      fxBeam(player.x, player.y, a, LEN, 5, '#ff2d78', 0.15);
+      fxBeam(player.x, player.y, a, LEN, 5, '#b64a3f', 0.15);
       sfx.laser();
       const dirX = Math.cos(a), dirY = Math.sin(a);
       for (const e of [...enemies]) {
@@ -181,5 +181,8 @@ export function updateWeapons(dt, player, ctx = {}) {
 }
 
 export function resetWeapons() {
+  for (const weapon of ownedWeapons) {
+    for (const mesh of weapon.state?.meshes || []) mesh.removeFromParent();
+  }
   ownedWeapons.length = 0;
 }

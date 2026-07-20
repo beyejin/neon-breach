@@ -3,47 +3,47 @@ import * as THREE from 'three';
 
 // 공통 팔레트
 export const COL = {
-  cyan: '#00e5ff',    // 플레이어
-  magenta: '#ff2d78', // 적
-  magentaDark: '#7a1440',
-  mint: '#00ffc8',    // 아군
-  mintDark: '#0c4f52',
-  purple: '#b44dff',  // XP
-  yellow: '#ffe600',  // 아군 탄
-  orange: '#ff9f1c',
-  dark1: '#1a1a2e',
-  dark2: '#2b2b45',
-  dark3: '#1f1f38',
-  white: '#ffffff',
+  cyan: '#d97835',    // 현장 장비 강조색
+  magenta: '#b64a3f', // 위험 개체
+  magentaDark: '#5f302b',
+  mint: '#7f9a76',    // 복구된 아군
+  mintDark: '#35493a',
+  purple: '#c39a5b',  // 회수 기록
+  yellow: '#e7c66a',  // 아군 탄
+  orange: '#d97835',
+  dark1: '#1b1e19',
+  dark2: '#34382f',
+  dark3: '#252920',
+  white: '#eee7d5',
 };
 
 // 픽셀맵 정의: 문자 → 팔레트 색, '.' = 투명
 const DEFS = {
   player: {
     pal: {
-      h: '#33f6ff',   // 네온 헤어 (밝은 시안 — 블룸 대상)
-      H: '#0fb3c4',   // 헤어 음영
-      v: '#ffffff',   // 바이저 (강한 발광)
-      s: '#f2c9a0',   // 피부
-      j: '#2a2a4a',   // 재킷
-      J: '#4a4a80',   // 재킷 하이라이트
-      a: COL.magenta, // 장갑/액센트
-      p: '#1f1f38',   // 하의
-      b: '#5a5aa0',   // 부츠
+      h: '#171c27',   // 이도: 짧은 검은 머리
+      H: '#35445a',
+      s: '#c99170',
+      d: '#62483e',   // 수염과 얼굴 음영
+      j: '#1c2938',   // 낡은 기술 재킷
+      J: '#354b60',
+      r: '#d97835',   // 공공 복구 단말
+      p: '#18202d',
+      b: '#39485a',
     },
     frames: [
       [
         '....hhhh....',
-        '..hhhhhhhh..',
-        '.hhhhhhhhhh.',
-        '..HvvvvvvH..',
-        '..ssssssss..',
+        '...hhhhhh...',
+        '..hhHhHhhh..',
         '...ssssss...',
-        '..jJjjjjJj..',
-        '.jjJjjjjJjj.',
-        '.jjjjaajjjj.',
+        '...sdsds....',
+        '...ssddss...',
+        '..JJjjjjJJ..',
+        '.jjJjrrjJjj.',
+        '.jjjjrrjjjj.',
         '.j..jjjj..j.',
-        '.a..jjjj..a.',
+        '....jjjj....',
         '....pppp....',
         '...pp..pp...',
         '...pp..pp...',
@@ -52,16 +52,15 @@ const DEFS = {
       ],
       [
         '....hhhh....',
-        '..hhhhhhhh..',
-        '.hhhhhhhhhh.',
-        '..HvvvvvvH..',
-        '..ssssssss..',
+        '...hhhhhh...',
+        '..hhHhHhhh..',
         '...ssssss...',
-        '..jJjjjjJj..',
-        '.jjJjjjjJjj.',
-        '.jjjjaajjjj.',
+        '...sdsds....',
+        '...ssddss...',
+        '..JJjjjjJJ..',
+        '.jjJjrrjJjj.',
+        '.jjjjrrjjjj.',
         '.j..jjjj..j.',
-        '.a..jjjj..a.',
         '....pppp....',
         '....pppp....',
         '...pp.pp....',
@@ -69,6 +68,54 @@ const DEFS = {
         '...bb...bb..',
       ],
     ],
+  },
+  nari: {
+    pal: {
+      h: '#111824', H: '#33465b', s: '#c99578',
+      j: '#17241d', J: '#334b3a', c: '#d97835', b: '#384139',
+    },
+    frames: [[
+      '...hhhhhh...',
+      '..hhhhhhhh..',
+      '..hHssssHh..',
+      '.c.ssssssc..',
+      '.c.ss..ss...',
+      '.c..ssss....',
+      '..JJjjjjJJ..',
+      '.jjJjccjJjj.',
+      '.jjjjccjjjj.',
+      '.j..jjjj..j.',
+      '....jjjj....',
+      '....bbbb....',
+      '...bb..bb...',
+      '...bb..bb...',
+      '..bb....bb..',
+      '..bb....bb..',
+    ]],
+  },
+  haeju: {
+    pal: {
+      h: '#171922', H: '#39404c', s: '#c88f6d',
+      u: '#183148', U: '#2c536a', v: '#d1df83', b: '#314253',
+    },
+    frames: [[
+      '...hhhhHh...',
+      '..hhhhhhhh..',
+      '..hHssssHh.h',
+      '...ssssss.hh',
+      '...ss..ss...',
+      '....ssss....',
+      '..UUuuuUUU..',
+      '.uuvvUuvvuu.',
+      '.uuvvUuvvuu.',
+      '.u..uuuu..u.',
+      '....uuuu....',
+      '....bbbb....',
+      '...bb..bb...',
+      '...bb..bb...',
+      '..bb....bb..',
+      '..bb....bb..',
+    ]],
   },
   rushbot: {
     // 이빨 달린 추격 드론 — 날카로운 마름모
@@ -238,31 +285,46 @@ const ALLY_RECOLOR = {
 
 const cache = new Map();
 
+export function makeImageTexture(url) {
+  const key = `image:${url}`;
+  if (cache.has(key)) return cache.get(key);
+  const texture = new THREE.TextureLoader().load(url);
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  cache.set(key, texture);
+  return texture;
+}
+
+export function makePixelCanvas(name, frame = 0, variant = null) {
+  const def = DEFS[name];
+  if (!def) throw new Error(`unknown sprite: ${name}`);
+  const rows = def.frames[frame % def.frames.length];
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(...rows.map((row) => row.length));
+  canvas.height = rows.length;
+  const context = canvas.getContext('2d');
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x += 1) {
+      const character = row[x];
+      if (character === '.') continue;
+      let color = def.pal[character];
+      if (!color) continue;
+      if (variant === 'ally' && ALLY_RECOLOR[color]) color = ALLY_RECOLOR[color];
+      context.fillStyle = color;
+      context.fillRect(x, y, 1, 1);
+    }
+  });
+  return canvas;
+}
+
 export function makeSprite(name, frame = 0, variant = null) {
   const key = `${name}:${frame}:${variant || ''}`;
   if (cache.has(key)) return cache.get(key);
 
-  const def = DEFS[name];
-  if (!def) throw new Error(`unknown sprite: ${name}`);
-  const rows = def.frames[frame % def.frames.length];
-  const w = Math.max(...rows.map(r => r.length));
-  const h = rows.length;
-
-  const cv = document.createElement('canvas');
-  cv.width = w;
-  cv.height = h;
-  const ctx = cv.getContext('2d');
-  rows.forEach((row, y) => {
-    for (let x = 0; x < row.length; x++) {
-      const ch = row[x];
-      if (ch === '.') continue;
-      let color = def.pal[ch];
-      if (!color) continue;
-      if (variant === 'ally' && ALLY_RECOLOR[color]) color = ALLY_RECOLOR[color];
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y, 1, 1);
-    }
-  });
+  const cv = makePixelCanvas(name, frame, variant);
+  const w = cv.width;
+  const h = cv.height;
 
   const tex = new THREE.CanvasTexture(cv);
   tex.magFilter = THREE.NearestFilter;

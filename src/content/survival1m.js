@@ -1,0 +1,92 @@
+export const SURVIVAL_1M = Object.freeze({
+  id: 'survival-1m',
+  title: '1분 극한 생존',
+  duration: 60,
+  completion: { type: 'survive', duration: 60 },
+  persistCompletion: false,
+  initialBurst: 30,
+  spawner: {
+    speedMul: 1.4,
+    spawnRadius: { min: 190, max: 240 },
+    initialBurstRadius: { min: 170, max: 210 },
+  },
+  waves: [
+    { until: 10, rates: { rushbot: 10, shooterbot: 2 } },
+    { until: 20, rates: { rushbot: 15, shooterbot: 4, tankbot: 0.8 } },
+    { until: 30, rates: { rushbot: 20, shooterbot: 5.5, tankbot: 1.1, elite: 0.15 } },
+    { until: 40, rates: { rushbot: 27, shooterbot: 7, tankbot: 1.7, elite: 0.25 } },
+    { until: 50, rates: { rushbot: 35, shooterbot: 9, tankbot: 2.6, elite: 0.4 } },
+    { until: 60, rates: { rushbot: 46, shooterbot: 12, tankbot: 3.6, elite: 0.6 } },
+  ],
+  boss: null,
+  storyEvents: [
+    {
+      id: 'survival-1m.start.briefing',
+      trigger: { type: 'chapter-start' },
+      presentation: 'briefing',
+      replay: 'always',
+      communication: 'required',
+      priority: 100,
+      maxDelay: 0,
+      payload: {
+        productTitle: '영점손해사정',
+        chapterTitle: '1분 극한 생존',
+        statusLines: [
+          'CHALLENGE // 동부 7구역 과부하',
+          '목표 생존 시간 01:00',
+          '경보: 시간이 지날수록 적 밀도가 폭증합니다.',
+        ],
+        dialogue: [
+          { speaker: 'SYSTEM', lines: ['구조망이 한계치를 넘었습니다.', '60초 동안 연결을 유지하십시오.'] },
+          { speaker: '나리', lines: ['이번엔 기록을 읽을 시간도 없어.', '살아남아서 신호만 넘겨.'] },
+          { speaker: '이도', lines: ['좋아. 밀어붙이는 만큼 끝까지 버틸게.'] },
+        ],
+        retryDialogue: [
+          { speaker: '나리', lines: ['다시 연결됐어.', '이번엔 60초만 버티면 돼.'] },
+          { speaker: '이도', lines: ['파형이 더 거칠어졌네. 시작하자.'] },
+        ],
+        tutorial: [
+          '목표 — 01:00까지 생존',
+          '자동 공격 — 접근하는 보안 드론 차단',
+          'SPACE — 표식된 드론을 복구해 아군으로 전환',
+          'SHIFT — 이동 중 누르면 달리기',
+        ],
+      },
+    },
+    {
+      id: 'survival-1m.victory',
+      trigger: { type: 'victory' },
+      presentation: 'result',
+      replay: 'always',
+      communication: 'required',
+      priority: 120,
+      maxDelay: 0,
+      payload: {
+        title: 'SURVIVAL COMPLETE',
+        subtitle: '1분 극한 생존',
+        dialogue: [
+          { speaker: 'SYSTEM', lines: ['60초 연결 유지.', '과부하 구간을 통과했습니다.'] },
+          { speaker: '이도', lines: ['끝까지 밀어붙였어.', '이 정도면 다음 기록도 열 수 있겠네.'] },
+        ],
+        resultLines: [
+          '01:00 생존 달성',
+          '고밀도 웨이브 차단 완료',
+        ],
+      },
+    },
+    {
+      id: 'survival-1m.defeat',
+      trigger: { type: 'defeat' },
+      presentation: 'result',
+      replay: 'always',
+      communication: 'required',
+      priority: 120,
+      maxDelay: 0,
+      payload: {
+        title: '접속 종료',
+        subtitle: '1분 극한 생존',
+        action: '다시 시도',
+      },
+    },
+  ],
+});
